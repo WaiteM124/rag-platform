@@ -24,7 +24,6 @@ def main(argv: list[str] | None = None) -> int:
         sources = root / "collections" / args.collection / "sources.yaml"
         if not sources.exists():
             raise SystemExit(f"Missing {sources}")
-        count = ingest_collection(args.collection, sources_path=sources, limit=args.limit)
-        logger.info("Ingested %s sources", count)
-        return 0
+        summary = ingest_collection(args.collection, sources_path=sources, limit=args.limit)
+        return summary.exit_code()
     return 1
