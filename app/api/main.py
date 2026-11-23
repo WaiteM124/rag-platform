@@ -83,9 +83,7 @@ def list_collections() -> JSONResponse:
     coming = [{"id": "uk-tax", "label": "UK Tax", "enabled": False, "status": "coming_soon"}]
     try:
         with psycopg.connect(db_dsn()) as conn, conn.cursor() as cur:
-            cur.execute(
-                "SELECT DISTINCT collection, COUNT(*) FROM sources GROUP BY collection"
-            )
+            cur.execute("SELECT DISTINCT collection, COUNT(*) FROM sources GROUP BY collection")
             counts = {row[0]: row[1] for row in cur.fetchall()}
             for item in enabled:
                 item["source_count"] = counts.get(item["id"], 0)

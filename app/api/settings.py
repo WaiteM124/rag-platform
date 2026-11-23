@@ -8,9 +8,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     aws_region: str = "eu-west-2"
-    answer_model_id: str = os.environ.get(
-        "RAG_ANSWER_MODEL_ID", "eu.anthropic.claude-haiku-5-5"
-    )
+    answer_model_id: str = os.environ.get("RAG_ANSWER_MODEL_ID", "eu.anthropic.claude-haiku-5-5")
     daily_spend_cap_gbp: float = 2.0
     usd_to_gbp: float = 0.79
     question_max_chars: int = 1000
