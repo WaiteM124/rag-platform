@@ -74,7 +74,7 @@ jobs:
         run: python scripts/seed_ci_corpus.py
 
       - name: pgvector integration tests (always)
-        run: pytest -q tests/unit tests/integration
+        run: pytest -q tests/unit tests/integration tests/api
 
       - name: Run fast eval + injection metrics (needs Bedrock)
         if: ${{ vars.AWS_EVAL_ROLE_ARN != '' }}
