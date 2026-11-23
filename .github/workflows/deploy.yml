@@ -1,0 +1,56 @@
+name: Deploy Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "web/**"
+      - "Dockerfile"
+      - "pyproject.toml"
+      - "ingest/migrations/**"
+      - "config/**"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+jobs:
+  build-deploy:
+    name: Build ARM64 image and deploy ECS
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_APPLY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          REPO: rag-platform-web
+          SHA: ${{ github.sha }}
+        run: |
+          docker buildx create --use --name rpbuilder || docker buildx use rpbuilder
+          docker buildx build \
+            --platform linux/arm64 \
+            -t "$REGISTRY/$REPO:$SHA" \
+            -t "$REGISTRY/$REPO:latest" \
+            -f Dockerfile \
+            --push .
+
+      - name: Force ECS deployment
+        run: |
+          CLUSTER="rag-platform-prod-cluster"
+          SERVICE="rag-platform-prod-web"
+          aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --force-new-deployment

@@ -1,0 +1,1 @@
+"""Public FastAPI service for the RAG demo."""

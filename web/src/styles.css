@@ -1,0 +1,94 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f1419;
+  --fg: #e7ecf3;
+  --muted: #9aa7b5;
+  --accent: #5b9fd4;
+  --card: #1a222c;
+}
+
+body.light {
+  color-scheme: light;
+  --bg: #f6f8fb;
+  --fg: #122033;
+  --muted: #5a6775;
+  --accent: #2563eb;
+  --card: #ffffff;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.layout {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.brand {
+  font-weight: 700;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+nav a {
+  margin-right: 0.75rem;
+  color: var(--muted);
+}
+
+textarea,
+select,
+button {
+  width: 100%;
+  font: inherit;
+  margin: 0.5rem 0;
+}
+
+button {
+  width: auto;
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+
+.answer,
+.about {
+  background: var(--card);
+  border-radius: 0.6rem;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.citations li {
+  margin: 0.5rem 0;
+}
+
+.error {
+  color: #f87171;
+}
+
+.meta span {
+  margin-right: 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
