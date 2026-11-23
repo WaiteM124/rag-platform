@@ -22,6 +22,18 @@ variable "github_repo" {
   default     = "rag-platform"
 }
 
+variable "github_owner_id" {
+  description = "GitHub owner/org numeric ID (immutable, prevents repo-name reuse attacks)"
+  type        = string
+  default     = "351398746"
+}
+
+variable "github_repo_id" {
+  description = "GitHub repository numeric ID (immutable, prevents repo-name reuse attacks)"
+  type        = string
+  default     = "1468576170"
+}
+
 variable "alert_email" {
   description = "Email address for budget alerts"
   type        = string

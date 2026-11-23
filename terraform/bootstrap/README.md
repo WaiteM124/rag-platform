@@ -120,9 +120,9 @@ if you need to modify the bootstrap resources later.
 ## Security Notes
 
 ### OIDC Trust Scoping
-- **Plan role**: Trusts only `repo:waitem124/rag-platform:pull_request` (PRs only)
-- **Apply role**: Trusts only `repo:waitem124/rag-platform:environment:production` (requires the GitHub environment)
-- **Case sensitivity**: GitHub OIDC tokens use lowercase for the repo path, so trust policies use `lower()` on the org/repo values
+- **Plan role**: Trusts only `repo:WaiteM124@351398746/rag-platform@1468576170:pull_request`
+- **Apply role**: Trusts only `repo:WaiteM124@351398746/rag-platform@1468576170:environment:production`
+- **Immutable ID pinning**: GitHub's OIDC `sub` claim embeds numeric owner and repo IDs (e.g., `@351398746`, `@1468576170`). These IDs are immutable—even if someone deletes and recreates a repo with the same name, the new repo gets a different ID. Pinning these IDs in the trust policy prevents repo-name reuse attacks where an attacker could create a repo with the same name after the original is deleted.
 - No long-lived AWS credentials are stored in GitHub
 
 ### IAM Least Privilege

@@ -115,25 +115,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [terraform-validate-prod, tflint]
     if: github.event_name == 'pull_request'
-    permissions:
-      id-token: write
-      contents: read
-      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      # TEMPORARY DEBUG STEP - Remove after OIDC issue is resolved
-      - name: Debug OIDC Token Claims
-        run: |
-          echo "=== TEMPORARY DEBUG: Inspecting OIDC token claims ==="
-          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
-          # Extract and decode ONLY the payload (middle part), never print raw token
-          PAYLOAD=$(echo "$TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null || echo "$TOKEN" | cut -d. -f2 | base64 -di)
-          echo "OIDC Token Claims:"
-          echo "$PAYLOAD" | jq '{sub, aud, iss, repository, repository_owner, job_workflow_ref}'
-          echo "=== END DEBUG ==="
 
       - name: Configure AWS Credentials (Plan Role)
         uses: aws-actions/configure-aws-credentials@v4

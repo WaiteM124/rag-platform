@@ -243,6 +243,7 @@ make plan ENV=prod
 
 - **No secrets in repo**: All credentials in AWS Secrets Manager
 - **OIDC authentication**: No long-lived AWS keys in GitHub
+- **Immutable ID pinning**: Trust policies pin GitHub's immutable owner/repo numeric IDs in the OIDC `sub` claim (e.g., `@351398746`, `@1468576170`), preventing repo-name reuse attacks
 - **Least-privilege CI roles**:
   - Plan role trusts only `pull_request` events
   - Apply role trusts only `environment:production` (requires GitHub environment)
