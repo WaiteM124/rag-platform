@@ -1,0 +1,17 @@
+# Price cards for token cost estimation (USD per 1K tokens). Review monthly.
+version: 1
+checked_at: "2026-11-23"
+source_url: "https://aws.amazon.com/bedrock/pricing/"
+region: eu-west-2
+note: "Marketplace / inference-profile prices may differ; treat as estimates until verified in-account."
+
+models:
+  eu.anthropic.claude-haiku-5-5:
+    input_per_1k: 0.001
+    output_per_1k: 0.005
+  eu.anthropic.claude-sonnet-5:
+    input_per_1k: 0.003
+    output_per_1k: 0.015
+  amazon.titan-embed-text-v2:0:
+    input_per_1k: 0.0001
+    output_per_1k: 0.0

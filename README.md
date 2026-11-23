@@ -3,7 +3,7 @@
 Production-grade multi-collection RAG platform on AWS demonstrating end-to-end AI system operation: infrastructure as code, eval-gated CI/CD, licence-aware retrieval, tracing, and cost visibility.
 
 **Author:** Miles Waite  
-**Status:** Phase 0 (Foundations)
+**Status:** Phase 1 (Complex Systems RAG core)
 
 ## Architecture
 
@@ -122,11 +122,14 @@ rag-platform/
 - [x] GitHub Actions CI/CD
 - [x] Pre-commit hooks
 
-### Phase 1: Complex Systems Ingestion
-- [ ] Source registry from verified list
-- [ ] Fetchers (arXiv, PDF, HTML)
-- [ ] Licence engine and validators
-- [ ] Chunking and embedding pipeline
+### Phase 1: Complex Systems RAG core (current)
+- [x] Source registry (`collections/complex-systems/sources.yaml`, 46 sources)
+- [x] Ingest fetchers (arXiv `/src`, PDF, HTML/PLOS/PMC/LibreTexts)
+- [x] Licence validation (ingest fails without licence metadata)
+- [x] Chunking, Titan V2 embeddings, pgvector + FTS schema
+- [x] Hybrid retrieval + Haiku answers + licence composer
+- [x] Eval harness v1 (golden set, injection, thresholds)
+- [x] Terraform: RDS + ECS ingest task + ECR (prod)
 
 ### Phase 2: Retrieval + API + v1 Live
 - [ ] Hybrid retrieval with RRF
@@ -150,6 +153,12 @@ rag-platform/
 - [ ] Complete source list (25-40)
 - [ ] GOV.UK-specific ingester
 - [ ] UK Tax golden set and gates
+
+### Next phases (after Phase 1)
+- **Phase 2:** FastAPI on Fargate, ALB, domain, SSE `/query`, minimal UI
+- **Phase 3:** Langfuse tracing, public `/evals` and `/costs`, full Ragas CI with reranker eval
+- **Phase 4:** Autoscaling, threat-model hardening, scheduled re-ingest
+- **Phase 5:** UK Tax collection
 
 ### Phase 6: Public Launch
 - [ ] Demo video and write-up
@@ -221,23 +230,39 @@ Go to: **GitHub repo → Settings → Secrets and variables → Actions → Vari
 | `TF_STATE_BUCKET` | `terraform output state_bucket_name` |
 | `AWS_PLAN_ROLE_ARN` | `terraform output plan_role_arn` |
 | `AWS_APPLY_ROLE_ARN` | `terraform output apply_role_arn` |
+| `AWS_EVAL_ROLE_ARN` | `terraform output eval_role_arn` (after bootstrap re-apply) |
 
-### Development
+### Bootstrap re-apply (required for Phase 1)
+
+After pulling Phase 1, re-run bootstrap from **AWS CloudShell** (admin) to create the `rag-platform-eval` OIDC role and extended apply permissions:
 
 ```bash
-# Install pre-commit hooks
-pre-commit install
-
-# Format and validate Terraform
-make fmt
-make validate
-
-# Run linting
-make lint
-
-# Plan changes
-make plan ENV=prod
+cd rag-platform/terraform/bootstrap
+terraform apply -var="alert_email=your-email@example.com"
+terraform output eval_role_arn
 ```
+
+Set GitHub variable `AWS_EVAL_ROLE_ARN` to that ARN.
+
+### Local development
+
+```bash
+pip install -e ".[dev]"
+docker compose up -d
+export DATABASE_URL=postgresql://rag:raglocal@localhost:5432/ragplatform
+python -m ingest.migrations.runner  # or: python -c "from ingest.migrations.runner import run_migrations; run_migrations('$DATABASE_URL')"
+python scripts/seed_ci_corpus.py     # small fixture corpus
+pytest -q
+
+# Ingest (needs AWS credentials + Bedrock for embeddings)
+python -m ingest run --collection complex-systems --limit 3
+
+make eval COLLECTION=complex-systems FAST=1
+```
+
+**Cost notes (prod, Phase 1 lean footprint):** RDS `db.t4g.micro` + 20 GB gp3 ≈ **$16/month**; ECS ingest runs are on-demand Fargate only when triggered; no ALB/NAT in Phase 1.
+
+See `docs/phase-1-architecture.md` for the Phase 1 diagram and Bedrock model defaults.
 
 ## Security
 

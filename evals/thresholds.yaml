@@ -1,0 +1,9 @@
+version: 1
+complex-systems:
+  faithfulness: 0.85
+  context_precision: 0.70
+  context_recall: 0.70
+  answer_relevancy: 0.80
+  citation_validity: 1.0
+  licence_compliance: 1.0
+  injection_pass_rate: 1.0

@@ -1,0 +1,47 @@
+name: Ingest
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: Optional source limit
+        required: false
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+jobs:
+  ingest:
+    name: Build and run ingest task
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_APPLY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push ingest image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          ECR_REPOSITORY: rag-platform-ingest
+        run: |
+          docker build -f ingest/Dockerfile -t "$ECR_REGISTRY/$ECR_REPOSITORY:latest" .
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+
+      - name: Run Fargate ingest task
+        run: |
+          echo "Run one-off ECS task via AWS CLI (cluster/task definition from Terraform outputs)"
+          echo "Optional limit: ${{ inputs.limit }}"

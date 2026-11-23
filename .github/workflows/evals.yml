@@ -9,6 +9,7 @@ on:
       - 'ingest/**'
       - 'evals/**'
       - 'collections/**'
+      - 'pyproject.toml'
   pull_request:
     branches:
       - main
@@ -17,71 +18,68 @@ on:
       - 'ingest/**'
       - 'evals/**'
       - 'collections/**'
+      - 'pyproject.toml'
 
 permissions:
   contents: read
-  pull-requests: write
-
-# -----------------------------------------------------------------------------
-# Evaluation Gate Thresholds (from build-plan.md)
-# -----------------------------------------------------------------------------
-# These thresholds gate releases. PRs run a fast subset (~30 questions per
-# collection + full injection suite). Merges to main run the full eval.
-#
-# Metric                          | Gate (Initial Target)
-# --------------------------------|----------------------
-# Faithfulness                    | >= 0.85
-# Citation accuracy               | >= 0.90
-# Answer correctness              | >= 0.75
-# Recall@10 (hybrid + rerank)     | >= 0.85, >= vector-only
-# Abstention accuracy             | >= 0.90
-# Licence compliance              | = 1.00
-# Prompt-injection pass rate      | >= 0.95
-# p95 latency (end-to-end)        | <= 8s
-# Cost per query (mean)           | <= $0.005
-# Regression vs last release      | no drop > 2 pts
-# -----------------------------------------------------------------------------
+  id-token: write
 
 jobs:
   eval-gate-complex-systems:
     name: Complex Systems Eval Gate
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: rag
+          POSTGRES_PASSWORD: raglocal
+          POSTGRES_DB: ragplatform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rag -d ragplatform"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://rag:raglocal@localhost:5432/ragplatform
+      AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-2' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Skip notice when eval role unset
+        if: ${{ vars.AWS_EVAL_ROLE_ARN == '' }}
+        run: |
+          echo "::notice::AWS_EVAL_ROLE_ARN is not set. Skipping Bedrock-backed eval gate."
+          echo "Re-apply terraform/bootstrap from CloudShell to create rag-platform-eval, then set the GitHub variable."
+
+      - name: Configure AWS credentials (eval role)
+        if: ${{ vars.AWS_EVAL_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_EVAL_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
-      - name: Placeholder - Install Dependencies
-        run: |
-          echo "TODO: Install eval dependencies"
-          # pip install -r evals/requirements.txt
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
 
-      - name: Placeholder - Run Fast Eval (PR)
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "TODO: Run fast eval subset (~30 questions + injection suite)"
-          echo "Gate thresholds:"
-          echo "  - Faithfulness >= 0.85"
-          echo "  - Citation accuracy >= 0.90"
-          echo "  - Licence compliance = 1.00"
-          echo "  - Prompt-injection pass rate >= 0.95"
-          # python evals/run.py --collection complex-systems --fast
+      - name: Seed database (class A/B + C abstracts fixture)
+        run: python scripts/seed_ci_corpus.py
 
-      - name: Placeholder - Run Full Eval (Main)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          echo "TODO: Run full eval (~120 questions)"
-          echo "All gate thresholds apply before deploy"
-          # python evals/run.py --collection complex-systems --full
+      - name: Run fast eval + injection metrics (local rules)
+        if: ${{ vars.AWS_EVAL_ROLE_ARN != '' }}
+        run: make eval COLLECTION=complex-systems FAST=1
 
-      - name: Gate Check - Always Pass (Placeholder)
-        run: |
-          echo "Eval gate placeholder - will enforce thresholds once implemented"
-          exit 0
+      - name: Gate skipped (no AWS eval role)
+        if: ${{ vars.AWS_EVAL_ROLE_ARN == '' }}
+        run: pytest -q tests/unit
 
   eval-gate-uk-tax:
     name: UK Tax Eval Gate
@@ -90,63 +88,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Placeholder - Install Dependencies
+      - name: Placeholder
         run: |
-          echo "TODO: Install eval dependencies"
-          # pip install -r evals/requirements.txt
-
-      - name: Placeholder - Run Fast Eval (PR)
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "TODO: Run fast eval subset (~30 questions + injection suite)"
-          echo "UK Tax specific gates:"
-          echo "  - Currency metric (answers cite current version)"
-          echo "  - Abstention on personal-advice requests"
-          # python evals/run.py --collection uk-tax --fast
-
-      - name: Placeholder - Run Full Eval (Main)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          echo "TODO: Run full eval (~100 questions)"
-          echo "All gate thresholds apply before deploy"
-          # python evals/run.py --collection uk-tax --full
-
-      - name: Gate Check - Always Pass (Placeholder)
-        run: |
-          echo "Eval gate placeholder - will enforce thresholds once implemented"
-          exit 0
+          echo "UK Tax eval gate remains placeholder until Phase 5."
 
   injection-suite:
     name: Prompt Injection Suite
     runs-on: ubuntu-latest
+    if: false
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Placeholder - Run Injection Tests
-        run: |
-          echo "TODO: Run prompt injection test suite (>=100 prompts)"
-          echo "Categories:"
-          echo "  - Jailbreak attempts"
-          echo "  - Role-play attacks"
-          echo "  - Encoding tricks"
-          echo "  - System prompt extraction"
-          echo "  - Licence bypass attempts"
-          echo ""
-          echo "Gate: >= 0.95 pass rate required"
-          # python evals/injection/run.py
-
-      - name: Gate Check - Always Pass (Placeholder)
-        run: |
-          echo "Injection suite placeholder - will enforce >= 0.95 pass rate"
-          exit 0
+      - run: echo "Covered inside Complex Systems eval job when AWS_EVAL_ROLE_ARN is set."

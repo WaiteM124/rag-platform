@@ -18,6 +18,11 @@ output "apply_role_arn" {
   value       = aws_iam_role.github_actions_apply.arn
 }
 
+output "eval_role_arn" {
+  description = "IAM role ARN for GitHub Actions eval gates (PR + main)"
+  value       = aws_iam_role.github_actions_eval.arn
+}
+
 output "github_oidc_provider_arn" {
   description = "GitHub OIDC provider ARN"
   value       = aws_iam_openid_connect_provider.github.arn
@@ -35,5 +40,6 @@ output "github_variables_to_set" {
     TF_STATE_BUCKET    = aws_s3_bucket.tfstate.id
     AWS_PLAN_ROLE_ARN  = aws_iam_role.github_actions_plan.arn
     AWS_APPLY_ROLE_ARN = aws_iam_role.github_actions_apply.arn
+    AWS_EVAL_ROLE_ARN  = aws_iam_role.github_actions_eval.arn
   }
 }
