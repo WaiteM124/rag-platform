@@ -56,3 +56,38 @@ module "network" {
   public_subnets  = local.public_subnets
   private_subnets = local.private_subnets
 }
+
+# -----------------------------------------------------------------------------
+# RDS (Phase 1+)
+# -----------------------------------------------------------------------------
+
+resource "aws_db_subnet_group" "main" {
+  count = var.enable_rds && var.enable_vpc ? 1 : 0
+
+  name        = "${local.name_prefix}-db"
+  description = "Database subnet group for ${local.name_prefix}"
+  subnet_ids  = module.network[0].private_subnet_ids
+
+  tags = {
+    Name = "${local.name_prefix}-db-subnet-group"
+  }
+}
+
+# -----------------------------------------------------------------------------
+# ECS (Phase 2+)
+# -----------------------------------------------------------------------------
+
+resource "aws_ecs_cluster" "main" {
+  count = var.enable_ecs ? 1 : 0
+
+  name = "${local.name_prefix}-cluster"
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
+
+  tags = {
+    Name = "${local.name_prefix}-cluster"
+  }
+}

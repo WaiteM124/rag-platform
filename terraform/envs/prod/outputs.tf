@@ -27,3 +27,13 @@ output "environment" {
   description = "Environment name"
   value       = var.environment
 }
+
+output "db_subnet_group_name" {
+  description = "RDS subnet group name"
+  value       = var.enable_rds && var.enable_vpc ? aws_db_subnet_group.main[0].name : null
+}
+
+output "ecs_cluster_arn" {
+  description = "ECS cluster ARN"
+  value       = var.enable_ecs ? aws_ecs_cluster.main[0].arn : null
+}
