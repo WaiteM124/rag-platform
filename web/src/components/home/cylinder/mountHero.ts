@@ -70,7 +70,7 @@ export function mountHero(root: HTMLElement, theme: HeroTheme): () => void {
     scene.background = new Color(bg);
     renderer.setClearColor(bg, 1);
     const canvas = renderer.domElement;
-    canvas.style.background = fallbackBackground(theme);
+    canvas.style.background = "transparent";
     for (const binding of bindings) {
       binding.material.color.setHex(lineColorForArc(theme, binding.arcColor));
     }
@@ -209,7 +209,7 @@ export function mountHero(root: HTMLElement, theme: HeroTheme): () => void {
     canvas.style.width = "100%";
     canvas.style.height = "100%";
     canvas.style.display = "block";
-    canvas.style.background = fallbackBackground(theme);
+    canvas.style.background = "transparent";
     root.replaceChildren(canvas);
     resize();
 

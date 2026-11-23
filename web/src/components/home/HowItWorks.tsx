@@ -25,9 +25,9 @@ export function HowItWorks() {
             <span className="home-how-index" aria-hidden="true">
               {String(index + 1).padStart(2, "0")}
             </span>
-            <div className="space-y-1">
-              <h3 className="text-sm font-medium tracking-tight text-foreground">{step.title}</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">{step.body}</p>
+            <div className="home-how-copy">
+              <h3 className="home-how-title">{step.title}</h3>
+              <p className="home-how-body">{step.body}</p>
             </div>
           </li>
         ))}

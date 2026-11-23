@@ -5,6 +5,7 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Skeleton } from "../ui/skeleton";
+import { cn } from "../../lib/utils";
 
 export type Collection = {
   id: string;
@@ -51,35 +52,39 @@ export function CollectionGrid() {
         {collections?.map((c) => (
           <Card
             key={c.id}
-            className={
-              c.enabled ? "home-collection-card home-collection-card--active" : "home-collection-card"
-            }
+            className={cn(
+              "home-collection-card",
+              c.enabled ? "home-collection-card--active" : "home-collection-card--soon",
+            )}
           >
-            <CardHeader className="space-y-2">
-              <CardTitle className="flex flex-wrap items-center gap-2 text-lg font-medium tracking-tight">
+            <CardHeader className={cn("space-y-2", !c.enabled && "pb-6")}>
+              <CardTitle
+                className={cn(
+                  "flex flex-wrap items-center gap-2 text-lg font-medium tracking-tight",
+                  !c.enabled && "home-collection-soon-title",
+                )}
+              >
                 {c.label}
                 {!c.enabled && (
-                  <Badge variant="outline" className="font-normal">
+                  <Badge variant="outline" className="font-normal text-muted-foreground">
                     Coming soon
                   </Badge>
                 )}
               </CardTitle>
-              <CardDescription className="text-sm leading-relaxed">
+              <CardDescription className={cn("text-sm leading-relaxed", !c.enabled && "text-muted-foreground/80")}>
                 {c.enabled
                   ? `${c.source_count ?? "46"} verified public sources, licence-classified.`
                   : "Curated public tax guidance — releasing in a later phase."}
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-0">
-              <Button
-                className="w-full sm:w-auto"
-                disabled={!c.enabled}
-                onClick={() => navigate(`/chat/${c.id}`)}
-              >
-                {c.enabled ? "Open chat" : "Not available yet"}
-                {c.enabled && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
-              </Button>
-            </CardContent>
+            {c.enabled && (
+              <CardContent className="pt-0">
+                <Button className="w-full sm:w-auto" onClick={() => navigate(`/chat/${c.id}`)}>
+                  Open chat
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </CardContent>
+            )}
           </Card>
         ))}
       </div>

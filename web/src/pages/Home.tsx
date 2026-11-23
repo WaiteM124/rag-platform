@@ -16,7 +16,9 @@ export default function Home() {
             Ask the research. Get cited answers.
           </h1>
           <p className="home-subline">
-            Licence-aware retrieval · Eval-gated releases · Open models on AWS
+            <span className="home-subline-part">Licence-aware retrieval</span>
+            <span className="home-subline-part">Eval-gated releases</span>
+            <span className="home-subline-part">Open models on AWS</span>
           </p>
           <div className="home-hero-cta">
             <Button asChild size="lg" className="rounded-full px-6">
