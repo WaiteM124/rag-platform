@@ -114,10 +114,10 @@ data "aws_iam_policy_document" "github_actions_plan_trust" {
     }
 
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "${local.github_oidc_provider_url}:sub"
       values = [
-        "repo:${var.github_org}/${var.github_repo}:pull_request"
+        "repo:${lower(var.github_org)}/${lower(var.github_repo)}:pull_request"
       ]
     }
   }
@@ -223,10 +223,10 @@ data "aws_iam_policy_document" "github_actions_apply_trust" {
     }
 
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "${local.github_oidc_provider_url}:sub"
       values = [
-        "repo:${var.github_org}/${var.github_repo}:environment:production"
+        "repo:${lower(var.github_org)}/${lower(var.github_repo)}:environment:production"
       ]
     }
   }

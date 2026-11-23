@@ -120,8 +120,9 @@ if you need to modify the bootstrap resources later.
 ## Security Notes
 
 ### OIDC Trust Scoping
-- **Plan role**: Trusts only `repo:WaiteM124/rag-platform:pull_request` (PRs only)
-- **Apply role**: Trusts only `repo:WaiteM124/rag-platform:environment:production` (requires the GitHub environment)
+- **Plan role**: Trusts only `repo:waitem124/rag-platform:pull_request` (PRs only)
+- **Apply role**: Trusts only `repo:waitem124/rag-platform:environment:production` (requires the GitHub environment)
+- **Case sensitivity**: GitHub OIDC tokens use lowercase for the repo path, so trust policies use `lower()` on the org/repo values
 - No long-lived AWS credentials are stored in GitHub
 
 ### IAM Least Privilege
