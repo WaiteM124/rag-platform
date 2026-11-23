@@ -29,15 +29,69 @@ variable "enable_vpc" {
 }
 
 variable "enable_rds" {
-  description = "Whether to create RDS resources (disabled for Phase 0)"
+  description = "Whether to create RDS resources"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "enable_ecs" {
-  description = "Whether to create ECS resources (disabled for Phase 0)"
+  description = "Whether to create ECS resources (ingest Fargate task)"
   type        = bool
-  default     = false
+  default     = true
+}
+
+variable "rds_instance_class" {
+  description = "RDS instance class"
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+variable "rds_allocated_storage_gb" {
+  description = "RDS allocated storage in GB"
+  type        = number
+  default     = 20
+}
+
+variable "rds_database_name" {
+  description = "Initial database name"
+  type        = string
+  default     = "ragplatform"
+}
+
+variable "rds_master_username" {
+  description = "RDS master username"
+  type        = string
+  default     = "ragadmin"
+}
+
+variable "bedrock_answer_model_id" {
+  description = "Bedrock model / inference profile ID for answers"
+  type        = string
+  default     = "eu.anthropic.claude-haiku-5-5"
+}
+
+variable "bedrock_eval_judge_model_id" {
+  description = "Bedrock model / inference profile ID for eval judge"
+  type        = string
+  default     = "eu.anthropic.claude-sonnet-5"
+}
+
+variable "bedrock_embedding_model_id" {
+  description = "Bedrock embedding model ID (Titan Text Embeddings V2, 1024-d)"
+  type        = string
+  default     = "amazon.titan-embed-text-v2:0"
+}
+
+variable "ingest_task_cpu" {
+  description = "Fargate CPU units for ingest task"
+  type        = string
+  default     = "512"
+}
+
+variable "ingest_task_memory" {
+  description = "Fargate memory (MiB) for ingest task"
+  type        = string
+  default     = "1024"
 }
 
 variable "common_tags" {

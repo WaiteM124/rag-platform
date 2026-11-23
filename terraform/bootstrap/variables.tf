@@ -46,3 +46,21 @@ variable "budget_limit" {
   default     = 50
 }
 
+variable "bedrock_answer_model_id" {
+  description = "Bedrock answer model / inference profile ID (eval role scope)"
+  type        = string
+  default     = "eu.anthropic.claude-haiku-5-5"
+}
+
+variable "bedrock_eval_judge_model_id" {
+  description = "Bedrock eval judge model / inference profile ID"
+  type        = string
+  default     = "eu.anthropic.claude-sonnet-5"
+}
+
+variable "bedrock_embedding_model_id" {
+  description = "Bedrock embedding model ID"
+  type        = string
+  default     = "amazon.titan-embed-text-v2:0"
+}
+

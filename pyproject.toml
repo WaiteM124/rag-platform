@@ -1,0 +1,50 @@
+[project]
+name = "rag-platform"
+version = "0.1.0"
+description = "Complex Systems RAG platform (ingest, retrieval, evals)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "boto3>=1.35.0",
+  "httpx>=0.27.0",
+  "langchain-aws>=0.2.0",
+  "langchain-core>=0.3.0",
+  "psycopg[binary,pool]>=3.2.0",
+  "pgvector>=0.3.0",
+  "pydantic>=2.9.0",
+  "pydantic-settings>=2.5.0",
+  "pymupdf>=1.24.0",
+  "pypdf>=5.0.0",
+  "pyyaml>=6.0.0",
+  "ragas>=0.2.0",
+  "tenacity>=9.0.0",
+  "tiktoken>=0.7.0",
+  "beautifulsoup4>=4.12.0",
+  "lxml>=5.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3.0",
+  "pytest-asyncio>=0.24.0",
+  "ruff>=0.6.0",
+]
+
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ingest*", "app*", "evals*"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["docs/build-plan.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

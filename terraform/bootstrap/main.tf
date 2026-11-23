@@ -522,12 +522,145 @@ data "aws_iam_policy_document" "github_actions_apply_permissions" {
     ]
     resources = ["*"]
   }
+
+  statement {
+    sid    = "KmsForRdsManagedSecrets"
+    effect = "Allow"
+    actions = [
+      "kms:DescribeKey",
+      "kms:CreateGrant",
+      "kms:Decrypt",
+      "kms:GenerateDataKey",
+      "kms:ReEncrypt*",
+      "kms:ListGrants",
+    ]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values = [
+        "secretsmanager.${var.aws_region}.amazonaws.com",
+        "rds.${var.aws_region}.amazonaws.com",
+      ]
+    }
+  }
+
+  statement {
+    sid    = "RdsManagedSecretsRead"
+    effect = "Allow"
+    actions = [
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:GetResourcePolicy",
+      "secretsmanager:ListSecretVersionIds",
+    ]
+    resources = [
+      "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:rds!db-*",
+    ]
+  }
+
+  statement {
+    sid    = "CloudWatchLogsScoped"
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:DeleteLogGroup",
+      "logs:PutRetentionPolicy",
+      "logs:TagResource",
+      "logs:ListTagsForResource",
+      "logs:TagLogGroup",
+    ]
+    resources = [
+      "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/ecs/${var.project_name}-*",
+      "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/ecs/${var.project_name}-*:*",
+    ]
+  }
 }
 
 resource "aws_iam_role_policy" "github_actions_apply" {
   name   = "terraform-apply"
   role   = aws_iam_role.github_actions_apply.id
   policy = data.aws_iam_policy_document.github_actions_apply_permissions.json
+}
+
+# -----------------------------------------------------------------------------
+# IAM Role: Eval (Bedrock-only, PRs + main push via OIDC)
+# -----------------------------------------------------------------------------
+
+data "aws_iam_policy_document" "github_actions_eval_trust" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${local.github_oidc_provider_url}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${local.github_oidc_provider_url}:sub"
+      values = [
+        "repo:${var.github_org}@${var.github_owner_id}/${var.github_repo}@${var.github_repo_id}:pull_request",
+        "repo:${var.github_org}@${var.github_owner_id}/${var.github_repo}@${var.github_repo_id}:ref:refs/heads/main",
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role" "github_actions_eval" {
+  name               = "${var.project_name}-eval"
+  assume_role_policy = data.aws_iam_policy_document.github_actions_eval_trust.json
+}
+
+locals {
+  bedrock_answer_foundation_model_id = trimprefix(var.bedrock_answer_model_id, "eu.")
+  bedrock_judge_foundation_model_id  = trimprefix(var.bedrock_eval_judge_model_id, "eu.")
+
+  bedrock_eval_invoke_arns = concat(
+    [
+      "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.bedrock_answer_model_id}",
+      "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.bedrock_eval_judge_model_id}",
+    ],
+    [
+      "arn:aws:bedrock:eu-*::foundation-model/${local.bedrock_answer_foundation_model_id}",
+      "arn:aws:bedrock:eu-*::foundation-model/${local.bedrock_judge_foundation_model_id}",
+      "arn:aws:bedrock:${var.aws_region}::foundation-model/${var.bedrock_embedding_model_id}",
+    ],
+  )
+}
+
+data "aws_iam_policy_document" "github_actions_eval_permissions" {
+  statement {
+    sid    = "BedrockInvokeOnly"
+    effect = "Allow"
+    actions = [
+      "bedrock:InvokeModel",
+      "bedrock:InvokeModelWithResponseStream",
+    ]
+    resources = local.bedrock_eval_invoke_arns
+  }
+
+  statement {
+    sid    = "STSIdentity"
+    effect = "Allow"
+    actions = [
+      "sts:GetCallerIdentity",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "github_actions_eval" {
+  name   = "bedrock-eval"
+  role   = aws_iam_role.github_actions_eval.id
+  policy = data.aws_iam_policy_document.github_actions_eval_permissions.json
 }
 
 # -----------------------------------------------------------------------------

@@ -1,0 +1,671 @@
+version: 1
+collection: complex-systems
+sources:
+- id: cs-001
+  module: A
+  title: 'Complex Systems: A Survey'
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/1112.1440
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Complex Systems: A Survey. Source: https://arxiv.org/abs/1112.1440'
+  format: arxiv_src
+- id: cs-002
+  module: A
+  title: 'Methods and Techniques of Complex Systems Science: An Overview'
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/nlin/0307015
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Methods and Techniques of Complex Systems Science: An Overview.
+    Source: https://arxiv.org/abs/nlin/0307015'
+  format: arxiv_src
+- id: cs-003
+  module: B
+  title: Introduction to the Modeling and Analysis of Complex Systems (LibreTexts
+    edition)
+  authors:
+  - Unknown
+  year: null
+  url: https://math.libretexts.org/Bookshelves/Scientific_Computing_Simulations_and_Modeling/Introduction_to_the_Modeling_and_Analysis_of_Complex_Systems_(Sayama
+  licence: CC-BY-NC-SA-3.0
+  licence_url: https://creativecommons.org/licenses/by-nc-sa/3.0/
+  licence_class: B
+  nc_flag: true
+  nd_flag: false
+  attribution_text: 'Introduction to the Modeling and Analysis of Complex Systems
+    (LibreTexts edition). Source: https://math.libretexts.org/Bookshelves/Scientific_Computing_Simulations_and_Modeling/Introduction_to_the_Modeling_and_Analysis_of_Complex_Systems_(Sayama'
+  format: libretexts
+- id: cs-004
+  module: B
+  title: 'ChaosBook.org: Chaos, Classical and Quantum'
+  authors:
+  - Unknown
+  year: null
+  url: https://chaosbook.org/
+  licence: LicenseRef-AllRightsReserved
+  licence_url: https://chaosbook.org/
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'ChaosBook.org: Chaos, Classical and Quantum. Source: https://chaosbook.org/'
+  format: pdf
+- id: cs-005
+  module: B
+  title: 'A mathematical framework for critical transitions: bifurcations, fast-slow
+    systems and stochastic dynamics'
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/1101.2899
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'A mathematical framework for critical transitions: bifurcations,
+    fast-slow systems and stochastic dynamics. Source: https://arxiv.org/abs/1101.2899'
+  format: arxiv_src
+- id: cs-006
+  module: B
+  title: 'Tipping points in open systems: bifurcation, noise-induced and rate-dependent
+    examples in the climate system'
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/1103.0169
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Tipping points in open systems: bifurcation, noise-induced and
+    rate-dependent examples in the climate system. Source: https://arxiv.org/abs/1103.0169'
+  format: arxiv_src
+- id: cs-007
+  module: C
+  title: When Can We Call a System Self-organizing?
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/nlin/0303020
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'When Can We Call a System Self-organizing?. Source: https://arxiv.org/abs/nlin/0303020'
+  format: arxiv_src
+- id: cs-008
+  module: C
+  title: Novel type of phase transition in a system of self-driven particles
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/cond-mat/0611743
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Novel type of phase transition in a system of self-driven particles.
+    Source: https://arxiv.org/abs/cond-mat/0611743'
+  format: arxiv_src
+- id: cs-009
+  module: C
+  title: Collective motion
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/1010.5017
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Collective motion. Source: https://arxiv.org/abs/1010.5017'
+  format: arxiv_src
+- id: cs-010
+  module: C
+  title: Boolean Dynamics with Random Couplings
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/nlin/0204062
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Boolean Dynamics with Random Couplings. Source: https://arxiv.org/abs/nlin/0204062'
+  format: arxiv_src
+- id: cs-011
+  module: C
+  title: When the map is better than the territory
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/1612.09592
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'When the map is better than the territory. Source: https://arxiv.org/abs/1612.09592'
+  format: arxiv_src
+- id: cs-012
+  module: C
+  title: 'Reconciling emergences: An information-theoretic approach to identify causal
+    emergence in multivariate data'
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/2004.08220
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Reconciling emergences: An information-theoretic approach to
+    identify causal emergence in multivariate data. Source: https://arxiv.org/abs/2004.08220'
+  format: arxiv_src
+- id: cs-013
+  module: C
+  title: Statistical physics of social dynamics
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/0710.3256
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Statistical physics of social dynamics. Source: https://arxiv.org/abs/0710.3256'
+  format: arxiv_src
+- id: cs-014
+  module: D
+  title: Power-law distributions in empirical data
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/0706.1062
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Power-law distributions in empirical data. Source: https://arxiv.org/abs/0706.1062'
+  format: arxiv_src
+- id: cs-015
+  module: D
+  title: Power laws, Pareto distributions and Zipf's law
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/cond-mat/0412004
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Power laws, Pareto distributions and Zipf''s law. Source: https://arxiv.org/abs/cond-mat/0412004'
+  format: arxiv_src
+- id: cs-016
+  module: D
+  title: Power laws and Self-Organized Criticality in Theory and Nature
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/1310.5527
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Power laws and Self-Organized Criticality in Theory and Nature.
+    Source: https://arxiv.org/abs/1310.5527'
+  format: arxiv_src
+- id: cs-017
+  module: D
+  title: 'Colloquium: Criticality and dynamical scaling in living systems'
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/1712.04499
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Colloquium: Criticality and dynamical scaling in living systems.
+    Source: https://arxiv.org/abs/1712.04499'
+  format: arxiv_src
+- id: cs-018
+  module: D
+  title: Methods for Detecting Early Warnings of Critical Transitions in Time Series
+    Illustrated Using Simulated Ecological Data
+  authors:
+  - Unknown
+  year: null
+  url: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0041010
+  licence: CC-BY-4.0
+  licence_url: https://creativecommons.org/licenses/by/4.0/
+  licence_class: A
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Methods for Detecting Early Warnings of Critical Transitions
+    in Time Series Illustrated Using Simulated Ecological Data. Source: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0041010'
+  format: jats
+- id: cs-019
+  module: D
+  title: Growth, innovation, scaling, and the pace of life in cities
+  authors:
+  - Unknown
+  year: null
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC1852329/
+  licence: LicenseRef-AllRightsReserved
+  licence_url: https://pmc.ncbi.nlm.nih.gov/articles/PMC1852329/
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Growth, innovation, scaling, and the pace of life in cities.
+    Source: https://pmc.ncbi.nlm.nih.gov/articles/PMC1852329/'
+  format: pmc
+- id: cs-020
+  module: D
+  title: 'Statistical Mechanics: Entropy, Order Parameters, and Complexity'
+  authors:
+  - Unknown
+  year: null
+  url: https://sethna.lassp.cornell.edu/StatMech/EntropyOrderParametersComplexity20.pdf
+  licence: LicenseRef-AllRightsReserved
+  licence_url: https://www.lassp.cornell.edu/sethna/StatMech/EntropyOrderParametersComplexity20.pdf
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Statistical Mechanics: Entropy, Order Parameters, and Complexity.
+    Source: https://www.lassp.cornell.edu/sethna/StatMech/EntropyOrderParametersComplexity20.pdf'
+  format: pdf
+- id: cs-021
+  module: E
+  title: Network Science (online textbook)
+  authors:
+  - Unknown
+  year: null
+  url: https://networksciencebook.com/
+  licence: CC-BY-NC-SA-2.0
+  licence_url: https://creativecommons.org/licenses/by-nc-sa/2.0/
+  licence_class: B
+  nc_flag: true
+  nd_flag: false
+  attribution_text: 'Network Science (online textbook). Source: https://networksciencebook.com/'
+  format: pdf
+- id: cs-022
+  module: E
+  title: Emergence of scaling in random networks
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/cond-mat/9910332
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Emergence of scaling in random networks. Source: https://arxiv.org/abs/cond-mat/9910332'
+  format: arxiv_src
+- id: cs-023
+  module: E
+  title: Statistical mechanics of complex networks
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/cond-mat/0106096
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Statistical mechanics of complex networks. Source: https://arxiv.org/abs/cond-mat/0106096'
+  format: arxiv_src
+- id: cs-024
+  module: E
+  title: The structure and function of complex networks
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/cond-mat/0303516
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'The structure and function of complex networks. Source: https://arxiv.org/abs/cond-mat/0303516'
+  format: arxiv_src
+- id: cs-025
+  module: E
+  title: Community detection in graphs
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/0906.0612
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Community detection in graphs. Source: https://arxiv.org/abs/0906.0612'
+  format: arxiv_src
+- id: cs-026
+  module: E
+  title: Epidemic processes in complex networks
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/1408.2701
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Epidemic processes in complex networks. Source: https://arxiv.org/abs/1408.2701'
+  format: arxiv_src
+- id: cs-027
+  module: E
+  title: Synchronization in complex networks
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/0805.2976
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Synchronization in complex networks. Source: https://arxiv.org/abs/0805.2976'
+  format: arxiv_src
+- id: cs-028
+  module: F
+  title: 'Computational Mechanics: Pattern and Prediction, Structure and Simplicity'
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/cond-mat/9907176
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Computational Mechanics: Pattern and Prediction, Structure and
+    Simplicity. Source: https://arxiv.org/abs/cond-mat/9907176'
+  format: arxiv_src
+- id: cs-029
+  module: F
+  title: 'Regularities Unseen, Randomness Observed: Levels of Entropy Convergence'
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/cond-mat/0102181
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Regularities Unseen, Randomness Observed: Levels of Entropy Convergence.
+    Source: https://arxiv.org/abs/cond-mat/0102181'
+  format: arxiv_src
+- id: cs-030
+  module: F
+  title: 'JIDT: An information-theoretic toolkit for studying the dynamics of complex
+    systems'
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/1408.3270
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'JIDT: An information-theoretic toolkit for studying the dynamics
+    of complex systems. Source: https://arxiv.org/abs/1408.3270'
+  format: arxiv_src
+- id: cs-031
+  module: F
+  title: Optimal leverage from non-ergodicity
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/0902.2965
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Optimal leverage from non-ergodicity. Source: https://arxiv.org/abs/0902.2965'
+  format: arxiv_src
+- id: cs-032
+  module: F
+  title: Evaluating gambles using dynamics
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/1405.0585
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Evaluating gambles using dynamics. Source: https://arxiv.org/abs/1405.0585'
+  format: arxiv_src
+- id: cs-033
+  module: F
+  title: The time interpretation of expected utility theory
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/1801.03680
+  licence: CC-BY-4.0
+  licence_url: https://creativecommons.org/licenses/by/4.0/
+  licence_class: A
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'The time interpretation of expected utility theory. Source: https://arxiv.org/abs/1801.03680'
+  format: arxiv_src
+- id: cs-034
+  module: F
+  title: Statistical Physics (Cambridge lecture notes)
+  authors:
+  - Unknown
+  year: null
+  url: https://www.damtp.cam.ac.uk/user/tong/statphys.html
+  licence: LicenseRef-AllRightsReserved
+  licence_url: https://www.damtp.cam.ac.uk/user/tong/statphys.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Statistical Physics (Cambridge lecture notes). Source: https://www.damtp.cam.ac.uk/user/tong/statphys.html'
+  format: pdf
+- id: cs-035
+  module: G
+  title: Evolutionary game dynamics (Bull. AMS 40:479–519)
+  authors:
+  - Unknown
+  year: null
+  url: https://www.ams.org/journals/bull/2003-40-04/S0273-0979-03-00988-1/
+  licence: LicenseRef-AllRightsReserved
+  licence_url: https://www.ams.org/journals/bull/2003-40-04/S0273-0979-03-00988-1/
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Evolutionary game dynamics (Bull. AMS 40:479–519). Source: https://www.ams.org/journals/bull/2003-40-04/S0273-0979-03-00988-1/'
+  format: pdf
+- id: cs-036
+  module: G
+  title: Five rules for the evolution of cooperation
+  authors:
+  - Unknown
+  year: null
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC3279745/
+  licence: LicenseRef-AllRightsReserved
+  licence_url: https://pmc.ncbi.nlm.nih.gov/articles/PMC3279745/
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Five rules for the evolution of cooperation. Source: https://pmc.ncbi.nlm.nih.gov/articles/PMC3279745/'
+  format: pmc
+- id: cs-037
+  module: G
+  title: Evolutionary games on graphs
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/cond-mat/0607344
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Evolutionary games on graphs. Source: https://arxiv.org/abs/cond-mat/0607344'
+  format: arxiv_src
+- id: cs-038
+  module: G
+  title: Statistical physics of human cooperation
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/1705.07161
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Statistical physics of human cooperation. Source: https://arxiv.org/abs/1705.07161'
+  format: arxiv_src
+- id: cs-039
+  module: H
+  title: 'powerlaw: a Python package for analysis of heavy-tailed distributions'
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/1305.0215
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'powerlaw: a Python package for analysis of heavy-tailed distributions.
+    Source: https://arxiv.org/abs/1305.0215'
+  format: arxiv_src
+- id: cs-040
+  module: H
+  title: Almost None of the Theory of Stochastic Processes
+  authors:
+  - Unknown
+  year: null
+  url: https://www.stat.cmu.edu/~cshalizi/almost-none/
+  licence: LicenseRef-AllRightsReserved
+  licence_url: https://www.stat.cmu.edu/~cshalizi/almost-none/
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Almost None of the Theory of Stochastic Processes. Source: https://www.stat.cmu.edu/~cshalizi/almost-none/'
+  format: pdf
+- id: cs-041
+  module: H
+  title: Think Complexity, 2nd edition
+  authors:
+  - Unknown
+  year: null
+  url: https://greenteapress.com/wp/think-complexity-2e/
+  licence: CC-BY-NC-SA-4.0
+  licence_url: https://creativecommons.org/licenses/by-nc-sa/4.0/
+  licence_class: B
+  nc_flag: true
+  nd_flag: false
+  attribution_text: 'Think Complexity, 2nd edition. Source: https://greenteapress.com/wp/think-complexity-2e/'
+  format: pdf
+- id: cs-042
+  module: I
+  title: Neural networks and physical systems with emergent collective computational
+    abilities
+  authors:
+  - Unknown
+  year: null
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC346238/
+  licence: LicenseRef-AllRightsReserved
+  licence_url: https://pmc.ncbi.nlm.nih.gov/articles/PMC346238/
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Neural networks and physical systems with emergent collective
+    computational abilities. Source: https://pmc.ncbi.nlm.nih.gov/articles/PMC346238/'
+  format: pdf
+- id: cs-043
+  module: I
+  title: Scaling Laws for Neural Language Models
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/2001.08361
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Scaling Laws for Neural Language Models. Source: https://arxiv.org/abs/2001.08361'
+  format: arxiv_src
+- id: cs-044
+  module: I
+  title: Emergent Abilities of Large Language Models
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/2206.07682
+  licence: CC-BY-4.0
+  licence_url: https://creativecommons.org/licenses/by/4.0/
+  licence_class: A
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Emergent Abilities of Large Language Models. Source: https://arxiv.org/abs/2206.07682'
+  format: arxiv_src
+- id: cs-045
+  module: I
+  title: Are Emergent Abilities of Large Language Models a Mirage?
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/2304.15004
+  licence: CC-BY-NC-ND-4.0
+  licence_url: https://creativecommons.org/licenses/by-nc-nd/4.0/
+  licence_class: C
+  nc_flag: true
+  nd_flag: true
+  attribution_text: 'Are Emergent Abilities of Large Language Models a Mirage?. Source:
+    https://arxiv.org/abs/2304.15004'
+  format: arxiv_src
+- id: cs-046
+  module: I
+  title: Why AI is Harder Than We Think
+  authors:
+  - Unknown
+  year: null
+  url: https://arxiv.org/abs/2104.12871
+  licence: LicenseRef-arXiv-1.0
+  licence_url: https://info.arxiv.org/help/license/index.html
+  licence_class: C
+  nc_flag: false
+  nd_flag: false
+  attribution_text: 'Why AI is Harder Than We Think. Source: https://arxiv.org/abs/2104.12871'
+  format: arxiv_src

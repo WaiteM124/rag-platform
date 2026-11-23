@@ -65,14 +65,13 @@ lint-python: ## Run Python linters (ruff)
 # Testing
 # -----------------------------------------------------------------------------
 
-test: ## Run all tests
-	@echo "TODO: Run tests"
-	@echo "  - Unit tests"
-	@echo "  - Integration tests"
-	@echo "  - Eval fast subset"
+test: lint-python test-unit ## Run linters and unit tests
 
 test-unit: ## Run unit tests
-	@echo "TODO: pytest tests/unit"
+	pytest -q tests/unit
+
+eval: ## Run eval harness (COLLECTION=complex-systems, FAST=1 optional)
+	python evals/run.py --collection $(COLLECTION) $(if $(FAST),--fast,)
 
 test-integration: ## Run integration tests
 	@echo "TODO: pytest tests/integration"

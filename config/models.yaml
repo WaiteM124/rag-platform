@@ -1,0 +1,5 @@
+region: eu-west-2
+embedding_model_id: amazon.titan-embed-text-v2:0
+embedding_dimensions: 1024
+answer_model_id: eu.anthropic.claude-haiku-5-5
+eval_judge_model_id: eu.anthropic.claude-sonnet-5
