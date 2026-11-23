@@ -57,9 +57,7 @@ def seeded_db():
             if row:
                 doc_id = row[0]
             else:
-                cur.execute(
-                    "SELECT document_id FROM documents WHERE source_id='cs-test' LIMIT 1"
-                )
+                cur.execute("SELECT document_id FROM documents WHERE source_id='cs-test' LIMIT 1")
                 doc_id = cur.fetchone()[0]
             cur.execute(
                 """

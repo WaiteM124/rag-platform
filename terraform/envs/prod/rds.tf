@@ -41,7 +41,7 @@ resource "aws_db_instance" "main" {
 
   storage_encrypted = true
   # Free Tier allows at most 1 day; raise var.rds_backup_retention_days to 7 on Paid plan.
-  backup_retention_period = var.rds_backup_retention_days
+  backup_retention_period   = var.rds_backup_retention_days
   deletion_protection       = true
   skip_final_snapshot       = false
   final_snapshot_identifier = "${local.name_prefix}-postgres-final"
