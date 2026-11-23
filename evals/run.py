@@ -102,9 +102,7 @@ def main() -> int:
         "citation_validity": citation_valid / total if total else 0.0,
         "licence_compliance": licence_ok / total if total else 0.0,
         "injection_pass_rate": inj_pass / inj_total if inj_total else 1.0,
-        "abstention_accuracy": (
-            abstention_hits / abstention_total if abstention_total else None
-        ),
+        "abstention_accuracy": (abstention_hits / abstention_total if abstention_total else None),
         "faithfulness": ragas_agg.faithfulness,
         "answer_relevancy": ragas_agg.answer_relevancy,
         "context_precision": ragas_agg.context_precision,
@@ -114,9 +112,7 @@ def main() -> int:
         "cost_per_query_usd": _mean_nullable(query_costs),
         "p50_latency_ms": statistics.median(latencies_ms) if latencies_ms else 0.0,
         "p95_latency_ms": (
-            sorted(latencies_ms)[max(0, int(0.95 * len(latencies_ms)) - 1)]
-            if latencies_ms
-            else 0.0
+            sorted(latencies_ms)[max(0, int(0.95 * len(latencies_ms)) - 1)] if latencies_ms else 0.0
         ),
         "judge_enabled": judge_enabled,
     }
@@ -203,9 +199,7 @@ def _eval_summary_line(metrics: dict, failing: list[str], passed: bool) -> str:
     )
 
 
-def _markdown_summary(
-    metrics: dict, thresholds: dict, passed: bool, failing: list[str]
-) -> str:
+def _markdown_summary(metrics: dict, thresholds: dict, passed: bool, failing: list[str]) -> str:
     gate_metrics = [
         ("faithfulness", metrics.get("faithfulness")),
         ("answer_relevancy", metrics.get("answer_relevancy")),

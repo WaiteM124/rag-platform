@@ -34,12 +34,15 @@ class RagasAggregate:
     judge_cost_total_usd: float = 0.0
     judge_parse_failures: int = 0
     _lists: dict[str, list[float]] = field(
-        default_factory=lambda: {k: [] for k in (
-            "faithfulness",
-            "answer_relevancy",
-            "context_precision",
-            "context_recall",
-        )}
+        default_factory=lambda: {
+            k: []
+            for k in (
+                "faithfulness",
+                "answer_relevancy",
+                "context_precision",
+                "context_recall",
+            )
+        }
     )
 
     def add(self, result: JudgeRunResult) -> None:
