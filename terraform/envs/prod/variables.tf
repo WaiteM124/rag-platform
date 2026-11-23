@@ -52,6 +52,17 @@ variable "rds_allocated_storage_gb" {
   default     = 20
 }
 
+variable "rds_backup_retention_days" {
+  description = "RDS automated backup retention (days). Free Tier allows 1; use 7 after Paid plan."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.rds_backup_retention_days >= 0 && var.rds_backup_retention_days <= 35
+    error_message = "rds_backup_retention_days must be between 0 and 35."
+  }
+}
+
 variable "rds_database_name" {
   description = "Initial database name"
   type        = string

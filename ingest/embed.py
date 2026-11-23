@@ -3,10 +3,16 @@ from __future__ import annotations
 import json
 import os
 
+from pgvector import Vector
+
 from ingest.config import bedrock_runtime
 
 DEFAULT_MODEL = os.environ.get("RAG_EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0")
 DIMENSIONS = 1024
+
+
+def to_vector(values: list[float]) -> Vector:
+    return Vector(values)
 
 
 def embed_texts(texts: list[str], model_id: str | None = None) -> list[list[float]]:

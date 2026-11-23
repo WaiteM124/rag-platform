@@ -165,6 +165,7 @@ data "aws_iam_policy_document" "github_actions_plan_permissions" {
       "ecr:Describe*",
       "ecr:GetRepositoryPolicy",
       "ecr:ListImages",
+      "ecr:ListTagsForResource",
       "rds:Describe*",
       "rds:List*",
       "s3:GetBucket*",

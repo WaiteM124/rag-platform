@@ -39,8 +39,9 @@ resource "aws_db_instance" "main" {
 
   parameter_group_name = aws_db_parameter_group.postgres16[0].name
 
-  storage_encrypted         = true
-  backup_retention_period   = 7
+  storage_encrypted = true
+  # Free Tier allows at most 1 day; raise var.rds_backup_retention_days to 7 on Paid plan.
+  backup_retention_period   = var.rds_backup_retention_days
   deletion_protection       = true
   skip_final_snapshot       = false
   final_snapshot_identifier = "${local.name_prefix}-postgres-final"

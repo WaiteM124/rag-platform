@@ -6,7 +6,7 @@ import psycopg
 from pgvector.psycopg import register_vector
 
 from app.core.rrf import reciprocal_rank_fusion
-from ingest.embed import embed_texts
+from ingest.embed import embed_texts, to_vector
 
 
 @dataclass(frozen=True)
@@ -58,7 +58,7 @@ class HybridRetriever:
                     ORDER BY c.embedding <=> %s
                     LIMIT %s
                     """,
-                    (collection, query_vec, top_vector),
+                    (collection, to_vector(query_vec), top_vector),
                 )
                 vector_ids = [r[0] for r in cur.fetchall()]
             fused = reciprocal_rank_fusion([lexical_ids, vector_ids], top_n=top_fused)
