@@ -78,13 +78,13 @@ variable "rds_master_username" {
 variable "bedrock_answer_model_id" {
   description = "Bedrock model / inference profile ID for answers"
   type        = string
-  default     = "eu.anthropic.claude-haiku-5-5"
+  default     = "qwen.qwen3-235b-a22b-2507-v1:0"
 }
 
 variable "bedrock_eval_judge_model_id" {
   description = "Bedrock model / inference profile ID for eval judge"
   type        = string
-  default     = "eu.anthropic.claude-sonnet-5"
+  default     = "deepseek.v3.2"
 }
 
 variable "bedrock_embedding_model_id" {

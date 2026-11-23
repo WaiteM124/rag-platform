@@ -45,6 +45,10 @@ jobs:
     env:
       DATABASE_URL: postgresql://rag:raglocal@localhost:5432/ragplatform
       AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-2' }}
+      ANSWER_MODEL_ID: ${{ vars.ANSWER_MODEL_ID || 'qwen.qwen3-235b-a22b-2507-v1:0' }}
+      JUDGE_MODEL_ID: ${{ vars.JUDGE_MODEL_ID || 'deepseek.v3.2' }}
+      RAG_ANSWER_MODEL_ID: ${{ vars.ANSWER_MODEL_ID || 'qwen.qwen3-235b-a22b-2507-v1:0' }}
+      RAG_JUDGE_MODEL_ID: ${{ vars.JUDGE_MODEL_ID || 'deepseek.v3.2' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
