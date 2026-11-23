@@ -1,7 +1,6 @@
 import {
   AmbientLight,
   BufferGeometry,
-  Color,
   DirectionalLight,
   Float32BufferAttribute,
   Group,
@@ -23,13 +22,7 @@ import {
   createCylinderArcs,
   type CylinderArc,
 } from "./cylinder";
-import {
-  fallbackBackground,
-  lineColorForArc,
-  sceneBackground,
-  strokeForArc,
-  type HeroTheme,
-} from "./themePalette";
+import { lineColorForArc, strokeForArc, type HeroTheme } from "./themePalette";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -66,11 +59,8 @@ export function mountHero(root: HTMLElement, theme: HeroTheme): () => void {
 
   const applyTheme = () => {
     if (!scene || !renderer) return;
-    const bg = sceneBackground(theme);
-    scene.background = new Color(bg);
-    renderer.setClearColor(bg, 1);
-    const canvas = renderer.domElement;
-    canvas.style.background = "transparent";
+    scene.background = null;
+    renderer.setClearColor(0x000000, 0);
     for (const binding of bindings) {
       binding.material.color.setHex(lineColorForArc(theme, binding.arcColor));
     }
@@ -176,7 +166,7 @@ export function mountHero(root: HTMLElement, theme: HeroTheme): () => void {
   try {
     created = new WebGLRenderer({
       antialias: true,
-      alpha: false,
+      alpha: true,
       powerPreference: "high-performance",
     });
     if (!created.getContext()) throw new Error("WebGL context unavailable");
@@ -192,8 +182,7 @@ export function mountHero(root: HTMLElement, theme: HeroTheme): () => void {
 
   try {
     scene = new Scene();
-    const bg = sceneBackground(theme);
-    scene.background = new Color(bg);
+    scene.background = null;
     camera = new PerspectiveCamera(CAMERA_FOV, 1, CAMERA_NEAR, CAMERA_FAR);
     camera.position.set(0, 0, CAMERA_Z);
 
@@ -204,12 +193,14 @@ export function mountHero(root: HTMLElement, theme: HeroTheme): () => void {
     addLights(scene);
     addArcs(container, createCylinderArcs(), theme, geometries, materials, bindings, spinners);
 
-    renderer.setClearColor(bg, 1);
+    renderer.setClearColor(0x000000, 0);
     const canvas = renderer.domElement;
     canvas.style.width = "100%";
     canvas.style.height = "100%";
     canvas.style.display = "block";
     canvas.style.background = "transparent";
+    canvas.style.border = "none";
+    canvas.style.outline = "none";
     root.replaceChildren(canvas);
     resize();
 
@@ -338,12 +329,6 @@ export function buildFallbackSvg(theme: HeroTheme): SVGSVGElement {
   svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
   svg.setAttribute("aria-hidden", "true");
   svg.setAttribute("class", "hero-cylinder-fallback");
-
-  const background = document.createElementNS(SVG_NS, "rect");
-  background.setAttribute("width", String(size));
-  background.setAttribute("height", String(size));
-  background.setAttribute("fill", fallbackBackground(theme));
-  svg.append(background);
 
   for (const arc of createCylinderArcs()) {
     const points = arc.points

@@ -19,15 +19,17 @@
 }
 
 .home-subline {
-  @apply flex max-w-full flex-wrap items-center gap-y-1 text-sm leading-relaxed text-muted-foreground sm:text-[0.9375rem] lg:flex-nowrap lg:gap-x-0 lg:text-base;
+  @apply flex max-w-full flex-col gap-1 text-sm leading-relaxed text-muted-foreground sm:text-[0.9375rem] lg:flex-row lg:flex-nowrap lg:gap-x-0 lg:text-base;
 }
 
 .home-subline-part {
-  @apply inline-flex shrink-0 items-center;
+  @apply block shrink-0;
 }
 
-.home-subline-part:not(:first-child)::before {
-  @apply mx-2 text-muted-foreground/45 content-['·'] lg:mx-2.5;
+@media (min-width: 1024px) {
+  .home-subline-part:not(:first-child)::before {
+    @apply mx-2.5 text-muted-foreground/45 content-['·'];
+  }
 }
 
 .home-hero-cta {
@@ -40,32 +42,37 @@
 }
 
 .hero-cylinder-root {
-  @apply aspect-square w-[min(132%,34rem)] max-w-none shrink-0 bg-transparent;
+  @apply aspect-square w-[min(132%,34rem)] max-w-none shrink-0 overflow-visible border-0 bg-transparent shadow-none;
   min-height: min(92vw, 34rem);
   margin-inline: auto;
   -webkit-mask-image: radial-gradient(
-    ellipse 74% 74% at 50% 50%,
-    #000 42%,
-    rgb(0 0 0 / 0.55) 62%,
-    transparent 86%
+    ellipse 82% 82% at 50% 50%,
+    #000 32%,
+    rgb(0 0 0 / 0.65) 52%,
+    rgb(0 0 0 / 0.2) 68%,
+    transparent 76%
   );
   mask-image: radial-gradient(
-    ellipse 74% 74% at 50% 50%,
-    #000 42%,
-    rgb(0 0 0 / 0.55) 62%,
-    transparent 86%
+    ellipse 82% 82% at 50% 50%,
+    #000 32%,
+    rgb(0 0 0 / 0.65) 52%,
+    rgb(0 0 0 / 0.2) 68%,
+    transparent 76%
   );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
 }
 
 .hero-cylinder-root--placeholder {
-  @apply animate-pulse opacity-40;
-  background: radial-gradient(circle at 50% 50%, hsl(var(--muted) / 0.35), transparent 70%);
+  @apply animate-pulse opacity-30;
+  background: transparent;
 }
 
 .hero-cylinder-root[data-state="fallback"] .hero-cylinder-fallback,
 .hero-cylinder-root canvas {
-  @apply h-full w-full;
-  background: transparent !important;
+  @apply block h-full w-full border-0 bg-transparent shadow-none outline-none;
 }
 
 .home-collections {
