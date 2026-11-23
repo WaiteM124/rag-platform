@@ -268,6 +268,17 @@ data "aws_iam_policy_document" "github_actions_apply_permissions" {
       "ec2:Get*",
       "ec2:CreateTags",
       "ec2:DeleteTags",
+      # Route actions (not covered by *RouteTable* wildcard)
+      "ec2:CreateRoute",
+      "ec2:DeleteRoute",
+      "ec2:ReplaceRoute",
+      # Security group rule actions (not covered by *SecurityGroup* wildcard)
+      "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:AuthorizeSecurityGroupEgress",
+      "ec2:RevokeSecurityGroupIngress",
+      "ec2:RevokeSecurityGroupEgress",
+      "ec2:UpdateSecurityGroupRuleDescriptionsIngress",
+      "ec2:UpdateSecurityGroupRuleDescriptionsEgress",
     ]
     resources = ["*"]
   }
