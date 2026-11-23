@@ -62,4 +62,4 @@ jobs:
           ruff format --check .
 
       - name: Pytest
-        run: pytest -q tests/unit tests/integration tests/api
+        run: pytest -q tests/unit tests/integration tests/api tests/ingest

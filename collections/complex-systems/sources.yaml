@@ -37,14 +37,14 @@ sources:
   authors:
   - Unknown
   year: null
-  url: https://math.libretexts.org/Bookshelves/Scientific_Computing_Simulations_and_Modeling/Introduction_to_the_Modeling_and_Analysis_of_Complex_Systems_(Sayama
+  url: https://math.libretexts.org/Bookshelves/Scientific_Computing_Simulations_and_Modeling/Introduction_to_the_Modeling_and_Analysis_of_Complex_Systems_(Sayama)
   licence: CC-BY-NC-SA-3.0
   licence_url: https://creativecommons.org/licenses/by-nc-sa/3.0/
   licence_class: B
   nc_flag: true
   nd_flag: false
   attribution_text: 'Introduction to the Modeling and Analysis of Complex Systems
-    (LibreTexts edition). Source: https://math.libretexts.org/Bookshelves/Scientific_Computing_Simulations_and_Modeling/Introduction_to_the_Modeling_and_Analysis_of_Complex_Systems_(Sayama'
+    (LibreTexts edition). Source: https://math.libretexts.org/Bookshelves/Scientific_Computing_Simulations_and_Modeling/Introduction_to_the_Modeling_and_Analysis_of_Complex_Systems_(Sayama)'
   format: libretexts
 - id: cs-004
   module: B
@@ -503,13 +503,13 @@ sources:
   authors:
   - Unknown
   year: null
-  url: https://www.ams.org/journals/bull/2003-40-04/S0273-0979-03-00988-1/
+  url: https://pure.iiasa.ac.at/id/eprint/6820/1/Evolutionary%20game%20dynamics.pdf
   licence: LicenseRef-AllRightsReserved
   licence_url: https://www.ams.org/journals/bull/2003-40-04/S0273-0979-03-00988-1/
   licence_class: C
   nc_flag: false
   nd_flag: false
-  attribution_text: 'Evolutionary game dynamics (Bull. AMS 40:479–519). Source: https://www.ams.org/journals/bull/2003-40-04/S0273-0979-03-00988-1/'
+  attribution_text: 'Evolutionary game dynamics (Bull. AMS 40:479–519). Source: https://pure.iiasa.ac.at/id/eprint/6820/1/Evolutionary%20game%20dynamics.pdf'
   format: pdf
 - id: cs-036
   module: G
@@ -574,13 +574,13 @@ sources:
   authors:
   - Unknown
   year: null
-  url: https://www.stat.cmu.edu/~cshalizi/almost-none/
+  url: https://www.stat.cmu.edu/~cshalizi/almost-none/v0.1.1/almost-none.pdf
   licence: LicenseRef-AllRightsReserved
   licence_url: https://www.stat.cmu.edu/~cshalizi/almost-none/
   licence_class: C
   nc_flag: false
   nd_flag: false
-  attribution_text: 'Almost None of the Theory of Stochastic Processes. Source: https://www.stat.cmu.edu/~cshalizi/almost-none/'
+  attribution_text: 'Almost None of the Theory of Stochastic Processes. Source: https://www.stat.cmu.edu/~cshalizi/almost-none/v0.1.1/almost-none.pdf'
   format: pdf
 - id: cs-041
   module: H
