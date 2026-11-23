@@ -8,6 +8,7 @@ import os
 import psycopg
 from pgvector.psycopg import register_vector
 
+from ingest.embed import to_vector
 from ingest.migrations.runner import run_migrations
 
 FIXTURES = [
@@ -32,7 +33,7 @@ FIXTURES = [
 def main() -> None:
     dsn = os.environ.get("DATABASE_URL", "postgresql://rag:raglocal@localhost:5432/ragplatform")
     run_migrations(dsn)
-    vec = [0.01] * 1024
+    vec = to_vector([0.01] * 1024)
     with psycopg.connect(dsn) as conn:
         register_vector(conn)
         with conn.cursor() as cur:

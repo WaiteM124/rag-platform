@@ -8,7 +8,7 @@ from pgvector.psycopg import register_vector
 
 from ingest.chunking import chunk_markdown, content_hash
 from ingest.config import CACHE_DIR, db_dsn
-from ingest.embed import DEFAULT_MODEL, embed_texts
+from ingest.embed import DEFAULT_MODEL, embed_texts, to_vector
 from ingest.fetchers.router import fetch_source_markdown
 from ingest.licence import SourceRecord, load_sources
 from ingest.migrations.runner import run_migrations
@@ -127,7 +127,7 @@ def _ingest_one(
                     c.text,
                     c.token_count,
                     c.chunk_hash,
-                    vec,
+                    to_vector(vec),
                     DEFAULT_MODEL,
                 ),
             )

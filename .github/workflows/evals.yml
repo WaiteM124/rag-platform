@@ -73,13 +73,12 @@ jobs:
       - name: Seed database (class A/B + C abstracts fixture)
         run: python scripts/seed_ci_corpus.py
 
-      - name: Run fast eval + injection metrics (local rules)
+      - name: pgvector integration tests (always)
+        run: pytest -q tests/unit tests/integration
+
+      - name: Run fast eval + injection metrics (needs Bedrock)
         if: ${{ vars.AWS_EVAL_ROLE_ARN != '' }}
         run: make eval COLLECTION=complex-systems FAST=1
-
-      - name: Gate skipped (no AWS eval role)
-        if: ${{ vars.AWS_EVAL_ROLE_ARN == '' }}
-        run: pytest -q tests/unit
 
   eval-gate-uk-tax:
     name: UK Tax Eval Gate
