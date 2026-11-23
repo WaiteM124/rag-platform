@@ -46,7 +46,7 @@ def test_ask_sse(mock_engine_cls, mock_stream, _rl, _cap, client):
     engine.retriever.retrieve.return_value = [chunk]
     engine.composer.context_blocks.return_value = "<context>data</context>"
     engine.prices = {
-        "eu.anthropic.claude-haiku-5-5": {"input_per_1k": 0.001, "output_per_1k": 0.005}
+        "qwen.qwen3-235b-a22b-2507-v1:0": {"input_per_1k": 0.00034, "output_per_1k": 0.00137}
     }
 
     def fake_stream(*_a, **_k):

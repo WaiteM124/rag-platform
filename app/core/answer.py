@@ -34,15 +34,17 @@ class AnswerEngine:
         chunks = self.retriever.retrieve(question, collection=collection)
         context = self.composer.context_blocks(chunks)
         user_text = f"Question:\n{question}\n\nContext:\n{context}"
+        model_id = ANSWER_MODEL
         text, tokens = converse(
             messages=[{"role": "user", "content": [{"text": user_text}]}],
             system=SYSTEM_PROMPT,
+            model_id=model_id,
         )
         text, licence_ok = self.composer.apply_output_policy(text, chunks)
         usage = TokenUsage(
             input_tokens=tokens["input_tokens"],
             output_tokens=tokens["output_tokens"],
-            model_id=ANSWER_MODEL,
+            model_id=model_id,
         )
         return AnswerResult(
             answer=text,

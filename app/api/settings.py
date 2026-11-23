@@ -8,7 +8,14 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     aws_region: str = "eu-west-2"
-    answer_model_id: str = os.environ.get("RAG_ANSWER_MODEL_ID", "eu.anthropic.claude-haiku-5-5")
+    answer_model_id: str = (
+        os.environ.get("ANSWER_MODEL_ID")
+        or os.environ.get("RAG_ANSWER_MODEL_ID")
+        or "qwen.qwen3-235b-a22b-2507-v1:0"
+    )
+    judge_model_id: str = (
+        os.environ.get("JUDGE_MODEL_ID") or os.environ.get("RAG_JUDGE_MODEL_ID") or "deepseek.v3.2"
+    )
     daily_spend_cap_gbp: float = 2.0
     usd_to_gbp: float = 0.79
     question_max_chars: int = 1000

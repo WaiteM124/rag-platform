@@ -34,7 +34,7 @@ flowchart TB
         end
 
         subgraph "AWS Services"
-            Bedrock[Amazon Bedrock<br/>Nova Lite / Titan V2]
+            Bedrock[Amazon Bedrock<br/>Qwen3 235B / Titan V2]
             SM[Secrets Manager]
             ECR[ECR]
         end
@@ -74,6 +74,18 @@ Each collection has its own:
 - System prompts and configuration
 - CI gate thresholds
 
+## Bedrock models (eu-west-2)
+
+| Role | Default model ID | Why |
+|------|------------------|-----|
+| **Answer / generation** | `qwen.qwen3-235b-a22b-2507-v1:0` | Open-weight Converse model while Claude account access is pending |
+| **Eval judge (Ragas)** | `deepseek.v3.2` | Different model family from the answer model to reduce self-preference bias |
+| **Embeddings** | `amazon.titan-embed-text-v2:0` | Unchanged 1024-d Titan V2 |
+
+Override with `ANSWER_MODEL_ID` / `RAG_ANSWER_MODEL_ID` and `JUDGE_MODEL_ID` / `RAG_JUDGE_MODEL_ID`. IAM still allows the Anthropic EU inference profiles so switching back to **Claude Haiku** (`eu.anthropic.claude-haiku-5-5`) for A/B comparison is config-only. Qwen3 extended-thinking tags are stripped from streamed responses before they reach the UI.
+
+Token costs for the spend ledger are loaded from `config/prices.yaml` (verify against [Bedrock pricing](https://aws.amazon.com/bedrock/pricing/) periodically).
+
 ## Licence-Aware Retrieval
 
 All sources are classified by licence for legal compliance:
@@ -96,7 +108,7 @@ The response composer enforces these rules automatically:
 |-----------|--------|-----------|
 | **Compute** | ECS Fargate (ARM/Graviton) | No cold starts, SSE streaming, ~$17/mo vs ~$37+ with NAT for Lambda |
 | **Database** | RDS PostgreSQL 16 + pgvector | ~$16/mo vs ~$400/mo OpenSearch Serverless floor |
-| **LLM** | Amazon Bedrock (Nova Lite) | ~$0.0005/query, with routing to stronger tiers |
+| **LLM** | Amazon Bedrock (Qwen3 235B, Converse) | Open-weight answer model in eu-west-2; config switch to Claude |
 | **Embeddings** | Titan Text Embeddings V2 | 1024-d, $0.0001/1K tokens |
 | **Retrieval** | Hybrid (FTS + HNSW + RRF + reranker) | Exact token matching for maths/tax codes |
 | **IaC** | Terraform | Remote state in S3, GitHub OIDC, no stored keys |
@@ -135,7 +147,7 @@ rag-platform/
 - [x] Ingest fetchers (arXiv `/src`, PDF, HTML/PLOS/PMC/LibreTexts)
 - [x] Licence validation (ingest fails without licence metadata)
 - [x] Chunking, Titan V2 embeddings, pgvector + FTS schema
-- [x] Hybrid retrieval + Haiku answers + licence composer
+- [x] Hybrid retrieval + Bedrock Converse answers + licence composer
 - [x] Eval harness v1 (golden set, injection, thresholds)
 - [x] Terraform: RDS + ECS ingest task + ECR (prod)
 

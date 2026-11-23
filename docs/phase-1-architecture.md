@@ -17,7 +17,7 @@ flowchart LR
 
   subgraph core [Python library app/core]
     RRF[RRF hybrid retrieval]
-    LLM[Claude Haiku Converse]
+    LLM[Qwen3 235B Converse]
     Lic[Licence composer]
     RRF --> LLM --> Lic
   end
@@ -31,3 +31,9 @@ flowchart LR
 ## Embeddings
 
 Default embedding model: `amazon.titan-embed-text-v2:0` (1024 dimensions). Documented on [Amazon Bedrock model list](https://docs.aws.amazon.com/bedrock/latest/userguide/models-supported.html) for European regions; verify in-account while AWS seller verification completes. Fallback in code: set `RAG_EMBEDDING_MODEL_ID=cohere.embed-english-v3` (not default).
+
+## Generation and eval judge
+
+- Answer model (Converse / ConverseStream): `qwen.qwen3-235b-a22b-2507-v1:0` via `ANSWER_MODEL_ID` or `RAG_ANSWER_MODEL_ID`.
+- Ragas judge: `deepseek.v3.2` via `JUDGE_MODEL_ID` or `RAG_JUDGE_MODEL_ID` (cross-family from the answer model).
+- Claude Haiku remains in IAM scope for config-only comparison runs.

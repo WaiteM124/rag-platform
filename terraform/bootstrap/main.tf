@@ -628,17 +628,50 @@ locals {
   bedrock_answer_foundation_model_id = trimprefix(var.bedrock_answer_model_id, "eu.")
   bedrock_judge_foundation_model_id  = trimprefix(var.bedrock_eval_judge_model_id, "eu.")
 
-  bedrock_eval_invoke_arns = concat(
+  bedrock_anthropic_inference_profile_ids = [
+    "eu.anthropic.claude-haiku-5-5",
+    "eu.anthropic.claude-sonnet-5",
+  ]
+
+  bedrock_inference_profile_ids = distinct(concat(
+    [var.bedrock_answer_model_id, var.bedrock_eval_judge_model_id],
+    local.bedrock_anthropic_inference_profile_ids,
+  ))
+
+  bedrock_retained_anthropic_foundation_ids = [
+    "anthropic.claude-haiku-5-5",
+    "anthropic.claude-sonnet-5",
+  ]
+
+  bedrock_in_region_foundation_ids = distinct(concat(
     [
-      "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.bedrock_answer_model_id}",
-      "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.bedrock_eval_judge_model_id}",
+      local.bedrock_answer_foundation_model_id,
+      local.bedrock_judge_foundation_model_id,
+      var.bedrock_embedding_model_id,
+    ],
+    local.bedrock_retained_anthropic_foundation_ids,
+  ))
+
+  bedrock_inference_profile_arns = [
+    for id in local.bedrock_inference_profile_ids :
+    "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/${id}"
+    if startswith(id, "eu.")
+  ]
+
+  bedrock_eval_invoke_arns = distinct(concat(
+    local.bedrock_inference_profile_arns,
+    [
+      for id in local.bedrock_in_region_foundation_ids :
+      "arn:aws:bedrock:${var.aws_region}::foundation-model/${id}"
     ],
     [
-      "arn:aws:bedrock:eu-*::foundation-model/${local.bedrock_answer_foundation_model_id}",
-      "arn:aws:bedrock:eu-*::foundation-model/${local.bedrock_judge_foundation_model_id}",
-      "arn:aws:bedrock:${var.aws_region}::foundation-model/${var.bedrock_embedding_model_id}",
+      for id in distinct(concat(
+        [local.bedrock_answer_foundation_model_id, local.bedrock_judge_foundation_model_id],
+        local.bedrock_retained_anthropic_foundation_ids,
+      )) :
+      "arn:aws:bedrock:eu-*::foundation-model/${id}"
     ],
-  )
+  ))
 }
 
 data "aws_iam_policy_document" "github_actions_eval_permissions" {
