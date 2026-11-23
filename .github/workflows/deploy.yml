@@ -1,19 +1,16 @@
 name: Deploy Web
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Terraform"]
+    types: [completed]
     branches: [main]
-    paths:
-      - "app/**"
-      - "web/**"
-      - "Dockerfile"
-      - "pyproject.toml"
-      - "ingest/migrations/**"
-      - "config/**"
+  workflow_dispatch:
 
 permissions:
   id-token: write
   contents: read
+  actions: read
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
@@ -21,10 +18,16 @@ env:
 jobs:
   build-deploy:
     name: Build ARM64 image and deploy ECS
-    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04-arm
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -35,22 +38,49 @@ jobs:
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Resolve image tag
+        id: meta
+        run: |
+          SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Check ECS service exists
+        id: ecs
+        env:
+          CLUSTER: rag-platform-prod-cluster
+          SERVICE: rag-platform-prod-web
+        run: |
+          STATUS=$(aws ecs describe-services \
+            --cluster "$CLUSTER" \
+            --services "$SERVICE" \
+            --query 'services[0].status' \
+            --output text 2>/dev/null || true)
+          if [ "$STATUS" != "ACTIVE" ]; then
+            echo "::notice title=ECS service not ready::${SERVICE} is not ACTIVE (status=${STATUS:-missing}); skipping build/deploy until Terraform has created the web service."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push
+        if: steps.ecs.outputs.deploy == 'true'
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
           REPO: rag-platform-web
-          SHA: ${{ github.sha }}
+          SHA: ${{ steps.meta.outputs.sha }}
         run: |
-          docker buildx create --use --name rpbuilder || docker buildx use rpbuilder
-          docker buildx build \
-            --platform linux/arm64 \
+          docker build \
             -t "$REGISTRY/$REPO:$SHA" \
             -t "$REGISTRY/$REPO:latest" \
             -f Dockerfile \
-            --push .
+            .
+          docker push "$REGISTRY/$REPO:$SHA"
+          docker push "$REGISTRY/$REPO:latest"
 
       - name: Force ECS deployment
+        if: steps.ecs.outputs.deploy == 'true'
+        env:
+          CLUSTER: rag-platform-prod-cluster
+          SERVICE: rag-platform-prod-web
         run: |
-          CLUSTER="rag-platform-prod-cluster"
-          SERVICE="rag-platform-prod-web"
           aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --force-new-deployment

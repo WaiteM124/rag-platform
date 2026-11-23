@@ -10,6 +10,18 @@ Portfolio-grade React UI (Tailwind + Radix/shadcn-style components, self-hosted 
 
 DNS is on **Cloudflare** (manual). Terraform does **not** create Route 53 records.
 
+## Database migrations
+
+On every ECS task start, FastAPI **startup** runs `ingest.migrations.runner.run_migrations` (idempotent: `001_init.sql`, `002_daily_spend.sql`, etc.). The web service uses the same `ecs-tasks-sg` as ingest, and **RDS** allows PostgreSQL from that security group only.
+
+**Deploy order:** merge → Terraform Apply on `main` → Deploy Web workflow (triggered by successful Terraform, or `workflow_dispatch`). The deploy job skips with a notice if the ECS web service is not `ACTIVE` yet.
+
+## Networking (verified)
+
+- **ALB → tasks:** `ecs-tasks-sg` ingress on **8000/tcp** from `alb-sg` only.
+- **ALB egress:** all traffic (includes **8000** to task ENIs).
+- **Tasks → RDS:** `rds-sg` ingress on **5432/tcp** from `ecs-tasks-sg`.
+
 ## Two-step HTTPS
 
 1. **`enable_https = false` (default)**  

@@ -12,8 +12,15 @@ _day_hits: dict[str, tuple[dt.date, int]] = {}
 
 
 def client_ip(forwarded_for: str | None, peer: str | None) -> str:
+    """Client IP behind a single trusted reverse proxy (ALB).
+
+    ALB appends the real client address as the last X-Forwarded-For hop; earlier
+    values may be spoofed by the client and must not be used for rate limiting.
+    """
     if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
+        hops = [p.strip() for p in forwarded_for.split(",") if p.strip()]
+        if hops:
+            return hops[-1]
     return peer or "unknown"
 
 
