@@ -187,7 +187,7 @@ resource "aws_ecs_task_definition" "ingest" {
       name      = "ingest"
       image     = "${aws_ecr_repository.ingest[0].repository_url}:latest"
       essential = true
-      command   = ["python", "-m", "ingest", "run", "--collection", "complex-systems"]
+      command   = ["run", "--collection", "complex-systems"]
 
       environment = [
         { name = "AWS_REGION", value = var.aws_region },
