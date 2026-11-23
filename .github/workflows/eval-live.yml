@@ -96,14 +96,14 @@ jobs:
             --query 'SecurityGroups[0].GroupId' \
             --output text)"
 
-          CMD=(evals/run.py --collection "$COLLECTION" --golden golden_live.jsonl)
+          CMD=(eval --collection "$COLLECTION" --golden golden_live.jsonl --require-judge)
           if [ "${FAST_FLAG}" = "true" ]; then
             CMD+=(--fast)
           fi
 
           OVERRIDES="$(jq -n \
             --arg name "ingest" \
-            --argjson cmd "$(printf '%s\n' python "${CMD[@]}" | jq -R . | jq -s .)" \
+            --argjson cmd "$(printf '%s\n' "${CMD[@]}" | jq -R . | jq -s .)" \
             --arg answer "$ANSWER_MODEL_ID" \
             --arg judge "$JUDGE_MODEL_ID" \
             '{
@@ -142,16 +142,24 @@ jobs:
           DESCRIBE="$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN")"
           EXIT_CODE="$(echo "$DESCRIBE" | jq -r '.tasks[0].containers[0].exitCode // empty')"
           LOG_STREAM="ingest/ingest/$TASK_ID"
-          LOGS="$(aws logs get-log-events \
+          LOGS="$(aws logs filter-log-events \
             --log-group-name "$LOG_GROUP" \
-            --log-stream-name "$LOG_STREAM" \
-            --limit 400 \
-            --output text \
-            --query 'events[*].message' 2>/dev/null || true)"
+            --log-stream-names "$LOG_STREAM" \
+            --output json | jq -r '.events[].message' 2>/dev/null || true)"
+          echo "----- CloudWatch log messages ($LOG_STREAM) -----"
           echo "$LOGS"
+          echo "----- end log messages -----"
 
           SUMMARY_LINE="$(echo "$LOGS" | grep -E '^EVAL SUMMARY ' | tail -1 || true)"
           REPORT_MD="$(echo "$LOGS" | sed -n '/^# Eval report/,/^$/p' | head -n 40)"
+          if [ -n "$SUMMARY_LINE" ]; then
+            echo "EVAL SUMMARY (full): $SUMMARY_LINE"
+          fi
+          if [ -n "$REPORT_MD" ]; then
+            echo "----- Eval markdown report -----"
+            echo "$REPORT_MD"
+            echo "----- end report -----"
+          fi
           {
             echo "## Eval live (${COLLECTION})"
             echo ""
@@ -168,7 +176,6 @@ jobs:
             echo "Missing EVAL SUMMARY line in logs"
             exit 1
           fi
-          echo "$SUMMARY_LINE"
           if echo "$SUMMARY_LINE" | grep -q 'gate=FAIL'; then
             echo "Eval gate failed"
             exit 1

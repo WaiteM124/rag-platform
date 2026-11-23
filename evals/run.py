@@ -24,7 +24,7 @@ REPORTS = Path(__file__).resolve().parent / "reports"
 RAGAS_KEYS = ("faithfulness", "answer_relevancy", "context_precision", "context_recall")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--collection", required=True)
     parser.add_argument("--fast", action="store_true")
@@ -34,7 +34,22 @@ def main() -> int:
         default="golden.jsonl",
         help="Golden set filename under evals/<collection>/ (e.g. golden_live.jsonl)",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--require-judge",
+        action="store_true",
+        help="Exit with error if AWS credentials for the Bedrock judge are unavailable",
+    )
+    args = parser.parse_args(argv)
+
+    judge_enabled = ragas_available()
+    if args.require_judge and not judge_enabled:
+        message = (
+            "Bedrock judge required (--require-judge) but no AWS credentials were resolved. "
+            "On ECS this usually means the task role is missing or the container "
+            "credentials endpoint is unreachable."
+        )
+        print(message)
+        return 1
 
     dsn = args.dsn or __import__("ingest.config", fromlist=["db_dsn"]).db_dsn()
     golden = Path(__file__).parent / args.collection / args.golden
@@ -51,7 +66,6 @@ def main() -> int:
     abstention_total = 0
     total = 0
     ragas_agg = empty_aggregate()
-    judge_enabled = ragas_available()
 
     for line in golden.read_text(encoding="utf-8").splitlines():
         if not line.strip():
