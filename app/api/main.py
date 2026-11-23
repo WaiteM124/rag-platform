@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import mimetypes
 import os
 import time
 from collections.abc import AsyncIterator
@@ -182,13 +183,29 @@ async def ask(body: AskBody, request: Request) -> StreamingResponse:
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
+def resolve_static_file(root: Path, full_path: str) -> Path | None:
+    """Return a file under root for full_path, or None for SPA / missing / unsafe paths."""
+    if not full_path or full_path.endswith("/"):
+        return None
+    resolved_root = root.resolve()
+    candidate = (resolved_root / full_path).resolve()
+    if not candidate.is_relative_to(resolved_root):
+        return None
+    if candidate.is_file():
+        return candidate
+    return None
+
+
 static_root = Path(os.environ.get("STATIC_DIR", get_settings().static_dir))
 if static_root.is_dir():
-    app.mount("/assets", StaticFiles(directory=static_root / "assets"), name="assets")
+    assets_dir = static_root / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
     @app.get("/{full_path:path}")
     def spa(full_path: str):
-        file_path = static_root / full_path
-        if full_path and file_path.is_file():
-            return FileResponse(file_path)
+        file_path = resolve_static_file(static_root, full_path)
+        if file_path is not None:
+            media_type, _ = mimetypes.guess_type(str(file_path))
+            return FileResponse(file_path, media_type=media_type)
         return FileResponse(static_root / "index.html")

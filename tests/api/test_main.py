@@ -1,12 +1,24 @@
 from __future__ import annotations
 
+import importlib
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.main import app
+from app.api.main import app, resolve_static_file
 from app.core.retrieval import RetrievedChunk
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+INDEX_HTML = REPO_ROOT / "web" / "index.html"
+
+# Minimal 1x1 PNG
+_MIN_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00"
+    b"\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+)
 
 
 @pytest.fixture
@@ -73,3 +85,37 @@ def test_ask_sse(mock_engine_cls, mock_stream, _rl, _cap, client):
 def test_ask_rejects_collection(client):
     r = client.post("/api/ask", json={"collection": "uk-tax", "question": "VAT?"})
     assert r.status_code == 400
+
+
+def test_index_html_has_absolute_og_and_twitter_meta():
+    html = INDEX_HTML.read_text(encoding="utf-8")
+    assert 'property="og:image" content="https://rag.mileswaite.net/og-image.png"' in html
+    assert 'name="twitter:card" content="summary_large_image"' in html
+    assert 'name="twitter:image" content="https://rag.mileswaite.net/og-image.png"' in html
+
+
+def test_resolve_static_file_rejects_traversal(tmp_path: Path):
+    (tmp_path / "safe.png").write_bytes(_MIN_PNG)
+    assert resolve_static_file(tmp_path, "safe.png") == (tmp_path / "safe.png").resolve()
+    assert resolve_static_file(tmp_path, "../safe.png") is None
+    assert resolve_static_file(tmp_path, "missing.png") is None
+
+
+def test_static_catch_all_serves_png_with_image_content_type(tmp_path: Path, monkeypatch):
+    (tmp_path / "index.html").write_text("<!doctype html><title>spa</title>", encoding="utf-8")
+    (tmp_path / "og-image.png").write_bytes(_MIN_PNG)
+    monkeypatch.setenv("STATIC_DIR", str(tmp_path))
+    import app.api.main as main_mod
+
+    importlib.reload(main_mod)
+    try:
+        with patch("app.api.main.run_migrations"):
+            client = TestClient(main_mod.app)
+            r = client.get("/og-image.png")
+        assert r.status_code == 200
+        assert "image/png" in r.headers["content-type"]
+        assert r.content.startswith(b"\x89PNG")
+        assert b"<!doctype html>" not in r.content
+    finally:
+        monkeypatch.delenv("STATIC_DIR", raising=False)
+        importlib.reload(main_mod)
