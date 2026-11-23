@@ -3,6 +3,11 @@ name: Ingest
 on:
   workflow_dispatch:
     inputs:
+      collection:
+        description: Collection to ingest
+        required: false
+        type: string
+        default: complex-systems
       limit:
         description: Optional source limit
         required: false
@@ -18,7 +23,7 @@ env:
 jobs:
   ingest:
     name: Build and run ingest task
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     environment: production
     steps:
       - uses: actions/checkout@v4
@@ -37,11 +42,128 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
           ECR_REPOSITORY: rag-platform-ingest
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -f ingest/Dockerfile -t "$ECR_REGISTRY/$ECR_REPOSITORY:latest" .
-          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+          set -euo pipefail
+          IMAGE_BASE="$ECR_REGISTRY/$ECR_REPOSITORY"
+          docker build -f ingest/Dockerfile \
+            -t "$IMAGE_BASE:latest" \
+            -t "$IMAGE_BASE:$IMAGE_TAG" \
+            .
+          docker push "$IMAGE_BASE:latest"
+          docker push "$IMAGE_BASE:$IMAGE_TAG"
 
       - name: Run Fargate ingest task
+        env:
+          COLLECTION: ${{ inputs.collection }}
+          LIMIT: ${{ inputs.limit }}
         run: |
-          echo "Run one-off ECS task via AWS CLI (cluster/task definition from Terraform outputs)"
-          echo "Optional limit: ${{ inputs.limit }}"
+          set -euo pipefail
+
+          CLUSTER="rag-platform-prod-cluster"
+          TASK_FAMILY="rag-platform-prod-ingest"
+          LOG_GROUP="/ecs/rag-platform-prod-ingest"
+          SG_NAME="rag-platform-prod-ecs-tasks-sg"
+
+          TASK_DEF_ARN="$(aws ecs list-task-definitions \
+            --family-prefix "$TASK_FAMILY" \
+            --sort DESC \
+            --max-items 1 \
+            --query 'taskDefinitionArns[0]' \
+            --output text)"
+          if [ -z "$TASK_DEF_ARN" ] || [ "$TASK_DEF_ARN" = "None" ]; then
+            echo "No task definition found for family $TASK_FAMILY"
+            exit 1
+          fi
+          echo "Task definition: $TASK_DEF_ARN"
+
+          SUBNET_IDS="$(aws ec2 describe-subnets \
+            --filters \
+              "Name=tag:Type,Values=public" \
+              "Name=tag:Project,Values=rag-platform" \
+              "Name=tag:Environment,Values=prod" \
+            --query 'Subnets[*].SubnetId' \
+            --output text | tr '\t' ' ')"
+          if [ -z "$SUBNET_IDS" ]; then
+            echo "No public subnets found"
+            exit 1
+          fi
+          echo "Subnets: $SUBNET_IDS"
+
+          SG_ID="$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=$SG_NAME" \
+            --query 'SecurityGroups[0].GroupId' \
+            --output text)"
+          if [ -z "$SG_ID" ] || [ "$SG_ID" = "None" ]; then
+            echo "Security group $SG_NAME not found"
+            exit 1
+          fi
+          echo "Security group: $SG_ID"
+
+          CMD=(run --collection "$COLLECTION")
+          if [ -n "${LIMIT:-}" ]; then
+            CMD+=(--limit "$LIMIT")
+          fi
+          OVERRIDES="$(jq -n \
+            --arg name "ingest" \
+            --argjson cmd "$(printf '%s\n' "${CMD[@]}" | jq -R . | jq -s .)" \
+            '{containerOverrides: [{name: $name, command: $cmd}]}')"
+
+          RUN_OUT="$(aws ecs run-task \
+            --cluster "$CLUSTER" \
+            --task-definition "$TASK_DEF_ARN" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[$(echo $SUBNET_IDS | sed 's/[[:space:]]\+/,/g')],securityGroups=[$SG_ID],assignPublicIp=ENABLED}" \
+            --overrides "$OVERRIDES")"
+
+          TASK_ARN="$(echo "$RUN_OUT" | jq -r '.tasks[0].taskArn')"
+          FAILURES="$(echo "$RUN_OUT" | jq -r '.failures | length')"
+          if [ "$FAILURES" != "0" ] || [ -z "$TASK_ARN" ] || [ "$TASK_ARN" = "null" ]; then
+            echo "run-task failed:"
+            echo "$RUN_OUT" | jq .
+            exit 1
+          fi
+          TASK_ID="${TASK_ARN##*/}"
+          echo "Started task: $TASK_ARN"
+
+          DEADLINE=$((SECONDS + 3600))
+          while [ "$SECONDS" -lt "$DEADLINE" ]; do
+            STATUS="$(aws ecs describe-tasks \
+              --cluster "$CLUSTER" \
+              --tasks "$TASK_ARN" \
+              --query 'tasks[0].lastStatus' \
+              --output text)"
+            echo "Task status: $STATUS"
+            if [ "$STATUS" = "STOPPED" ]; then
+              break
+            fi
+            sleep 15
+          done
+          if [ "$STATUS" != "STOPPED" ]; then
+            echo "Task did not stop within 60 minutes"
+            exit 1
+          fi
+
+          DESCRIBE="$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN")"
+          EXIT_CODE="$(echo "$DESCRIBE" | jq -r '.tasks[0].containers[0].exitCode // empty')"
+          STOPPED_REASON="$(echo "$DESCRIBE" | jq -r '.tasks[0].stoppedReason // empty')"
+          echo "Container exit code: ${EXIT_CODE:-unknown}"
+          echo "Stopped reason: $STOPPED_REASON"
+
+          LOG_STREAM="ingest/ingest/$TASK_ID"
+          echo "CloudWatch log stream: $LOG_GROUP / $LOG_STREAM"
+          if aws logs get-log-events \
+            --log-group-name "$LOG_GROUP" \
+            --log-stream-name "$LOG_STREAM" \
+            --limit 200 \
+            --output text \
+            --query 'events[*].message' 2>/dev/null; then
+            :
+          else
+            echo "(Log stream not available yet or empty)"
+          fi
+
+          if [ "${EXIT_CODE:-1}" != "0" ]; then
+            echo "Ingest task failed with exit code ${EXIT_CODE:-unknown}"
+            exit 1
+          fi
