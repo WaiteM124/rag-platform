@@ -24,7 +24,7 @@ REPORTS = Path(__file__).resolve().parent / "reports"
 RAGAS_KEYS = ("faithfulness", "answer_relevancy", "context_precision", "context_recall")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--collection", required=True)
     parser.add_argument("--fast", action="store_true")
@@ -34,7 +34,7 @@ def main() -> int:
         default="golden.jsonl",
         help="Golden set filename under evals/<collection>/ (e.g. golden_live.jsonl)",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     dsn = args.dsn or __import__("ingest.config", fromlist=["db_dsn"]).db_dsn()
     golden = Path(__file__).parent / args.collection / args.golden

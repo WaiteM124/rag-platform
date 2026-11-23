@@ -96,14 +96,14 @@ jobs:
             --query 'SecurityGroups[0].GroupId' \
             --output text)"
 
-          CMD=(evals/run.py --collection "$COLLECTION" --golden golden_live.jsonl)
+          CMD=(eval --collection "$COLLECTION" --golden golden_live.jsonl)
           if [ "${FAST_FLAG}" = "true" ]; then
             CMD+=(--fast)
           fi
 
           OVERRIDES="$(jq -n \
             --arg name "ingest" \
-            --argjson cmd "$(printf '%s\n' python "${CMD[@]}" | jq -R . | jq -s .)" \
+            --argjson cmd "$(printf '%s\n' "${CMD[@]}" | jq -R . | jq -s .)" \
             --arg answer "$ANSWER_MODEL_ID" \
             --arg judge "$JUDGE_MODEL_ID" \
             '{
