@@ -1,0 +1,85 @@
+.home {
+  @apply flex flex-col gap-20 md:gap-28;
+}
+
+.home-hero {
+  @apply grid items-center gap-10 md:gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(280px,42%)] lg:gap-16;
+}
+
+.home-hero-copy {
+  @apply flex max-w-xl flex-col gap-6;
+}
+
+.home-eyebrow {
+  @apply text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground;
+}
+
+.home-headline {
+  @apply text-[2rem] font-semibold leading-[1.12] tracking-tight text-foreground sm:text-4xl md:text-[2.75rem] md:leading-[1.08];
+}
+
+.home-subline {
+  @apply max-w-md text-sm leading-relaxed text-muted-foreground sm:text-base;
+}
+
+.home-hero-cta {
+  @apply pt-2;
+}
+
+.home-hero-visual {
+  @apply relative mx-auto w-full max-w-md lg:max-w-none;
+}
+
+.hero-cylinder-root {
+  @apply aspect-square w-full overflow-hidden rounded-3xl border border-border/60 bg-background;
+  min-height: min(72vw, 420px);
+}
+
+.hero-cylinder-root--placeholder {
+  @apply animate-pulse bg-muted/40;
+}
+
+.hero-cylinder-root[data-state="fallback"] .hero-cylinder-fallback,
+.hero-cylinder-root canvas {
+  @apply h-full w-full;
+}
+
+.home-section-header {
+  @apply mb-8 flex flex-col gap-2;
+}
+
+.home-section-title {
+  @apply text-xl font-semibold tracking-tight text-foreground sm:text-2xl;
+}
+
+.home-section-lead {
+  @apply text-sm text-muted-foreground sm:text-base;
+}
+
+.home-collections-grid {
+  @apply grid gap-5 sm:grid-cols-2;
+}
+
+.home-collection-card {
+  @apply border-border/80 bg-card/50 shadow-none transition-colors duration-200;
+}
+
+.home-collection-card--active:hover {
+  @apply border-border bg-card;
+}
+
+.home-how {
+  @apply border-t border-border/70 pt-12 md:pt-16;
+}
+
+.home-how-list {
+  @apply grid gap-8 sm:grid-cols-3 sm:gap-10;
+}
+
+.home-how-item {
+  @apply flex gap-4 sm:flex-col sm:gap-3;
+}
+
+.home-how-index {
+  @apply font-mono text-xs tabular-nums text-muted-foreground;
+}
