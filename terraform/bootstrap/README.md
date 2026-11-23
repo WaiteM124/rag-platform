@@ -22,7 +22,7 @@ Run this manually in AWS CloudShell with administrator access.
      - IAM write actions scoped to `arn:aws:iam::<account>:role/rag-platform-*` and `policy/rag-platform-*`
      - Explicit Deny on modifying the plan/apply roles themselves
      - `iam:PassRole` restricted to ECS tasks only
-     - `CreateServiceLinkedRole` conditioned on specific AWS services
+     - `CreateServiceLinkedRole` conditioned on specific AWS services (including ECS Application Auto Scaling)
 
 4. **AWS Budget**
    - $50/month limit (covers entire dedicated account)
@@ -109,13 +109,66 @@ terraform output apply_role_arn
 
 ## State Management
 
-This bootstrap stack uses **local state** because:
+This bootstrap stack uses **local state** (`terraform.tfstate` in this directory) because:
 - It's run once manually
 - It creates the S3 bucket that stores state for all other stacks
 - Circular dependency if it used remote state
 
-Keep the CloudShell session or save the `terraform.tfstate` file securely
-if you need to modify the bootstrap resources later.
+**Terraform >= 1.10.0 is required** (see `required_version` in `main.tf`); older CLI versions cannot use S3 native lockfile locking used by the other stacks.
+
+### CloudShell state loss
+
+AWS CloudShell wipes your home directory (including clone, `.terraform/`, and `terraform.tfstate`) after a period of inactivity. If bootstrap was already applied successfully, the AWS resources still exist—you only lost local state. Do **not** run `terraform apply` again on a fresh CloudShell session without recovering state, or Terraform will try to recreate resources and fail.
+
+### Recovering state with `terraform import`
+
+After `terraform init`, import existing resources (replace placeholders with your values from the AWS console or CLI):
+
+| Terraform address | Import ID |
+|-------------------|-----------|
+| `aws_s3_bucket.tfstate` | `<project_name>-tfstate-<ACCOUNT_ID>` (e.g. `rag-platform-tfstate-123456789012`) |
+| `aws_s3_bucket_versioning.tfstate` | Same bucket name |
+| `aws_s3_bucket_server_side_encryption_configuration.tfstate` | Same bucket name |
+| `aws_s3_bucket_public_access_block.tfstate` | Same bucket name |
+| `aws_s3_bucket_lifecycle_configuration.tfstate` | Same bucket name |
+| `aws_iam_openid_connect_provider.github` | `arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com` |
+| `aws_iam_role.github_actions_plan` | `<project_name>-plan` |
+| `aws_iam_role_policy.github_actions_plan` | `<project_name>-plan:terraform-plan` |
+| `aws_iam_role.github_actions_apply` | `<project_name>-apply` |
+| `aws_iam_role_policy.github_actions_apply` | `<project_name>-apply:terraform-apply` |
+| `aws_iam_role.github_actions_eval` | `<project_name>-eval` |
+| `aws_iam_role_policy.github_actions_eval` | `<project_name>-eval:bedrock-eval` |
+| `aws_budgets_budget.monthly` | `<ACCOUNT_ID>:<project_name>-monthly` |
+
+Example (default `project_name` is `rag-platform`):
+
+```bash
+export PATH="$HOME/bin:$PATH"   # if using a user-installed Terraform >= 1.10
+cd rag-platform/terraform/bootstrap
+terraform init
+
+BUCKET="rag-platform-tfstate-123456789012"
+ACCOUNT_ID="123456789012"
+
+terraform import aws_s3_bucket.tfstate "$BUCKET"
+terraform import aws_s3_bucket_versioning.tfstate "$BUCKET"
+terraform import aws_s3_bucket_server_side_encryption_configuration.tfstate "$BUCKET"
+terraform import aws_s3_bucket_public_access_block.tfstate "$BUCKET"
+terraform import aws_s3_bucket_lifecycle_configuration.tfstate "$BUCKET"
+terraform import aws_iam_openid_connect_provider.github "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
+terraform import aws_iam_role.github_actions_plan rag-platform-plan
+terraform import aws_iam_role_policy.github_actions_plan rag-platform-plan:terraform-plan
+terraform import aws_iam_role.github_actions_apply rag-platform-apply
+terraform import aws_iam_role_policy.github_actions_apply rag-platform-apply:terraform-apply
+terraform import aws_iam_role.github_actions_eval rag-platform-eval
+terraform import aws_iam_role_policy.github_actions_eval rag-platform-eval:bedrock-eval
+terraform import aws_budgets_budget.monthly "${ACCOUNT_ID}:rag-platform-monthly"
+
+terraform plan -var="alert_email=your-email@example.com"
+# Expect no changes (or only drift you intend to fix)
+```
+
+Keep a backup of `terraform.tfstate` somewhere secure (e.g. encrypted object storage) after a successful apply if you plan to change bootstrap later without repeating imports.
 
 ## Security Notes
 
@@ -129,7 +182,7 @@ if you need to modify the bootstrap resources later.
 - Role/policy write actions are scoped to `arn:aws:iam::<account>:role/rag-platform-*` and `policy/rag-platform-*`
 - **Self-modification denied**: The apply role cannot modify itself or the plan role
 - `iam:PassRole` is restricted to `ecs-tasks.amazonaws.com` only
-- `CreateServiceLinkedRole` is conditioned on specific AWS services (ECS, RDS, ELB, Application Auto Scaling)
+- `CreateServiceLinkedRole` is conditioned on specific AWS services (ECS, ECS Application Auto Scaling, RDS, ELB, Application Auto Scaling)
 
 ### Why No Permissions Boundary?
 

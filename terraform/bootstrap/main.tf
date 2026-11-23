@@ -412,6 +412,7 @@ data "aws_iam_policy_document" "github_actions_apply_permissions" {
       variable = "iam:AWSServiceName"
       values = [
         "ecs.amazonaws.com",
+        "ecs.application-autoscaling.amazonaws.com",
         "rds.amazonaws.com",
         "elasticloadbalancing.amazonaws.com",
         "application-autoscaling.amazonaws.com",
