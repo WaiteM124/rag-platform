@@ -14,7 +14,9 @@ DNS is on **Cloudflare** (manual). Terraform does **not** create Route 53 record
 
 On every ECS task start, FastAPI **startup** runs `ingest.migrations.runner.run_migrations` (idempotent: `001_init.sql`, `002_daily_spend.sql`, etc.). The web service uses the same `ecs-tasks-sg` as ingest, and **RDS** allows PostgreSQL from that security group only.
 
-**Deploy order:** merge → Terraform Apply on `main` → Deploy Web workflow (triggered by successful Terraform, or `workflow_dispatch`). The deploy job skips with a notice if the ECS web service is not `ACTIVE` yet.
+**Deploy order:** merge → Terraform Apply on `main` → Deploy Web workflow (triggered by any successful **Terraform** workflow run on `main`, with no path filter—infra-only applies still deploy; or use `workflow_dispatch`). The deploy job skips with a notice if the ECS web service is not `ACTIVE` yet.
+
+After Terraform publishes a new web task definition revision, the deploy job calls `update-service` with task family `rag-platform-prod-web` (latest ACTIVE revision) because the ECS service ignores `task_definition` changes in Terraform state.
 
 ## Networking (verified)
 
@@ -22,18 +24,21 @@ On every ECS task start, FastAPI **startup** runs `ingest.migrations.runner.run_
 - **ALB egress:** all traffic (includes **8000** to task ENIs).
 - **Tasks → RDS:** `rds-sg` ingress on **5432/tcp** from `ecs-tasks-sg`.
 
-## Two-step HTTPS
+## HTTPS
 
-1. **`enable_https = false` (default)**  
-   - `terraform apply` creates the ALB, ECS service, and ACM certificate (pending validation).  
-   - Outputs: `alb_dns_name`, `acm_validation_record_name`, `acm_validation_record_value`.  
-   - In Cloudflare: add the ACM validation CNAME, then a CNAME `rag` → `alb_dns_name` (proxied or DNS-only).  
-   - Wait until ACM shows the certificate as **Issued** (console).
+**Current default:** `enable_https = true` in prod (`terraform/envs/prod/variables_web.tf`). ACM for `rag.mileswaite.net` is **Issued** and Cloudflare DNS targets the ALB.
 
-2. **`enable_https = true`**  
-   - Set `enable_https = true` in prod tfvars (or variable) and apply again.  
-   - HTTP listener returns 301 → HTTPS; HTTPS uses `ELBSecurityPolicy-TLS13-1-2-2021-06`.  
-   - Set ECS env `HTTPS_ENABLED=true` (Terraform sets this when `enable_https` is true).
+On apply:
+
+- HTTPS listener on **443** with `ELBSecurityPolicy-TLS13-1-2-2021-06`
+- HTTP **301** redirect to HTTPS
+- ECS env `HTTPS_ENABLED=true`
+
+### First-time bootstrap (before cert is issued)
+
+1. Set `enable_https = false` and apply — ALB, ECS, ACM (pending validation). Use outputs `alb_dns_name`, `acm_validation_record_name`, `acm_validation_record_value`.
+2. In Cloudflare: ACM validation CNAME, then `rag` → `alb_dns_name`. Wait until ACM is **Issued**.
+3. Set `enable_https = true` and apply again (or rely on the default once issued).
 
 ## Langfuse
 

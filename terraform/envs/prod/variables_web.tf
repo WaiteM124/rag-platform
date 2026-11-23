@@ -11,9 +11,9 @@ variable "domain_name" {
 }
 
 variable "enable_https" {
-  description = "HTTPS listener with ACM cert (set true after DNS validation)"
+  description = "HTTPS listener with ACM cert and HTTP→HTTPS redirect (ACM for domain_name must be ISSUED)"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "web_task_cpu" {
