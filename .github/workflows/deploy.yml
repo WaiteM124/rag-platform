@@ -82,5 +82,11 @@ jobs:
         env:
           CLUSTER: rag-platform-prod-cluster
           SERVICE: rag-platform-prod-web
+          TASK_DEFINITION: rag-platform-prod-web
         run: |
-          aws ecs update-service --cluster "$CLUSTER" --service "$SERVICE" --force-new-deployment
+          aws ecs update-service \
+            --cluster "$CLUSTER" \
+            --service "$SERVICE" \
+            --task-definition "$TASK_DEFINITION" \
+            --force-new-deployment
+          aws ecs wait services-stable --cluster "$CLUSTER" --services "$SERVICE"
