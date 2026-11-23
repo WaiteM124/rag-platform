@@ -135,8 +135,6 @@ data "aws_iam_policy_document" "ingest_task" {
     sid    = "BedrockInvoke"
     effect = "Allow"
     actions = [
-      "bedrock:Converse",
-      "bedrock:ConverseStream",
       "bedrock:InvokeModel",
       "bedrock:InvokeModelWithResponseStream",
     ]

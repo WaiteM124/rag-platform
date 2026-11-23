@@ -679,8 +679,6 @@ data "aws_iam_policy_document" "github_actions_eval_permissions" {
     sid    = "BedrockInvokeOnly"
     effect = "Allow"
     actions = [
-      "bedrock:Converse",
-      "bedrock:ConverseStream",
       "bedrock:InvokeModel",
       "bedrock:InvokeModelWithResponseStream",
     ]

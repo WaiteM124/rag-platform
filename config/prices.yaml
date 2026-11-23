@@ -1,29 +1,26 @@
 # Price cards for token cost estimation (USD per 1K tokens). Review monthly.
 version: 2
 checked_at: "2026-11-23"
+source_url: "https://aws.amazon.com/bedrock/pricing/"
 region: eu-west-2
 note: >
-  On-demand list prices for eu-west-2 (London). Each model block includes a source_url
-  from the public Bedrock pricing page; set a rate to null if not verified in-console.
+  Qwen3 235B and DeepSeek V3.2 eu-west-2 on-demand list prices taken from the
+  public Bedrock pricing explorer for London (Nov 2026); override via model
+  keys here if in-account invoices differ. Anthropic profiles kept for switch-back.
 
 models:
   qwen.qwen3-235b-a22b-2507-v1:0:
-    # source_url: https://aws.amazon.com/bedrock/pricing/ (Qwen3 235B, eu-west-2 on-demand)
     input_per_1k: 0.00034
     output_per_1k: 0.00137
   deepseek.v3.2:
-    # source_url: https://aws.amazon.com/bedrock/pricing/ (DeepSeek V3.2, eu-west-2 on-demand)
     input_per_1k: 0.000961
     output_per_1k: 0.00287
   eu.anthropic.claude-haiku-5-5:
-    # source_url: https://aws.amazon.com/bedrock/pricing/ (Claude Haiku inference profile)
     input_per_1k: 0.001
     output_per_1k: 0.005
   eu.anthropic.claude-sonnet-5:
-    # source_url: https://aws.amazon.com/bedrock/pricing/ (Claude Sonnet inference profile)
     input_per_1k: 0.003
     output_per_1k: 0.015
   amazon.titan-embed-text-v2:0:
-    # source_url: https://aws.amazon.com/bedrock/pricing/ (Titan Text Embeddings V2, eu-west-2)
     input_per_1k: 0.0001
     output_per_1k: 0.0
