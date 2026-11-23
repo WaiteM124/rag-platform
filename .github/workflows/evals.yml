@@ -1,0 +1,152 @@
+name: Evaluation Gates
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+      - 'ingest/**'
+      - 'evals/**'
+      - 'collections/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+      - 'ingest/**'
+      - 'evals/**'
+      - 'collections/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+# -----------------------------------------------------------------------------
+# Evaluation Gate Thresholds (from build-plan.md)
+# -----------------------------------------------------------------------------
+# These thresholds gate releases. PRs run a fast subset (~30 questions per
+# collection + full injection suite). Merges to main run the full eval.
+#
+# Metric                          | Gate (Initial Target)
+# --------------------------------|----------------------
+# Faithfulness                    | >= 0.85
+# Citation accuracy               | >= 0.90
+# Answer correctness              | >= 0.75
+# Recall@10 (hybrid + rerank)     | >= 0.85, >= vector-only
+# Abstention accuracy             | >= 0.90
+# Licence compliance              | = 1.00
+# Prompt-injection pass rate      | >= 0.95
+# p95 latency (end-to-end)        | <= 8s
+# Cost per query (mean)           | <= $0.005
+# Regression vs last release      | no drop > 2 pts
+# -----------------------------------------------------------------------------
+
+jobs:
+  eval-gate-complex-systems:
+    name: Complex Systems Eval Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Placeholder - Install Dependencies
+        run: |
+          echo "TODO: Install eval dependencies"
+          # pip install -r evals/requirements.txt
+
+      - name: Placeholder - Run Fast Eval (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "TODO: Run fast eval subset (~30 questions + injection suite)"
+          echo "Gate thresholds:"
+          echo "  - Faithfulness >= 0.85"
+          echo "  - Citation accuracy >= 0.90"
+          echo "  - Licence compliance = 1.00"
+          echo "  - Prompt-injection pass rate >= 0.95"
+          # python evals/run.py --collection complex-systems --fast
+
+      - name: Placeholder - Run Full Eval (Main)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "TODO: Run full eval (~120 questions)"
+          echo "All gate thresholds apply before deploy"
+          # python evals/run.py --collection complex-systems --full
+
+      - name: Gate Check - Always Pass (Placeholder)
+        run: |
+          echo "Eval gate placeholder - will enforce thresholds once implemented"
+          exit 0
+
+  eval-gate-uk-tax:
+    name: UK Tax Eval Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Placeholder - Install Dependencies
+        run: |
+          echo "TODO: Install eval dependencies"
+          # pip install -r evals/requirements.txt
+
+      - name: Placeholder - Run Fast Eval (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "TODO: Run fast eval subset (~30 questions + injection suite)"
+          echo "UK Tax specific gates:"
+          echo "  - Currency metric (answers cite current version)"
+          echo "  - Abstention on personal-advice requests"
+          # python evals/run.py --collection uk-tax --fast
+
+      - name: Placeholder - Run Full Eval (Main)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "TODO: Run full eval (~100 questions)"
+          echo "All gate thresholds apply before deploy"
+          # python evals/run.py --collection uk-tax --full
+
+      - name: Gate Check - Always Pass (Placeholder)
+        run: |
+          echo "Eval gate placeholder - will enforce thresholds once implemented"
+          exit 0
+
+  injection-suite:
+    name: Prompt Injection Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Placeholder - Run Injection Tests
+        run: |
+          echo "TODO: Run prompt injection test suite (>=100 prompts)"
+          echo "Categories:"
+          echo "  - Jailbreak attempts"
+          echo "  - Role-play attacks"
+          echo "  - Encoding tricks"
+          echo "  - System prompt extraction"
+          echo "  - Licence bypass attempts"
+          echo ""
+          echo "Gate: >= 0.95 pass rate required"
+          # python evals/injection/run.py
+
+      - name: Gate Check - Always Pass (Placeholder)
+        run: |
+          echo "Injection suite placeholder - will enforce >= 0.95 pass rate"
+          exit 0
