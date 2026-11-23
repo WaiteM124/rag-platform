@@ -609,15 +609,20 @@ resource "aws_iam_role" "github_actions_eval" {
 }
 
 locals {
-  bedrock_eval_invoke_arns = [
-    "arn:aws:bedrock:${var.aws_region}::foundation-model/${var.bedrock_answer_model_id}",
-    "arn:aws:bedrock:${var.aws_region}::foundation-model/${var.bedrock_eval_judge_model_id}",
-    "arn:aws:bedrock:${var.aws_region}::foundation-model/${var.bedrock_embedding_model_id}",
-    "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.bedrock_answer_model_id}",
-    "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.bedrock_eval_judge_model_id}",
-    "arn:aws:bedrock:${var.aws_region}::inference-profile/${var.bedrock_answer_model_id}",
-    "arn:aws:bedrock:${var.aws_region}::inference-profile/${var.bedrock_eval_judge_model_id}",
-  ]
+  bedrock_answer_foundation_model_id = trimprefix(var.bedrock_answer_model_id, "eu.")
+  bedrock_judge_foundation_model_id  = trimprefix(var.bedrock_eval_judge_model_id, "eu.")
+
+  bedrock_eval_invoke_arns = concat(
+    [
+      "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.bedrock_answer_model_id}",
+      "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/${var.bedrock_eval_judge_model_id}",
+    ],
+    [
+      "arn:aws:bedrock:eu-*::foundation-model/${local.bedrock_answer_foundation_model_id}",
+      "arn:aws:bedrock:eu-*::foundation-model/${local.bedrock_judge_foundation_model_id}",
+      "arn:aws:bedrock:${var.aws_region}::foundation-model/${var.bedrock_embedding_model_id}",
+    ],
+  )
 }
 
 data "aws_iam_policy_document" "github_actions_eval_permissions" {

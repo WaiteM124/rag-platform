@@ -17,10 +17,11 @@ resource "aws_db_parameter_group" "postgres16" {
 resource "aws_db_instance" "main" {
   count = var.enable_rds && var.enable_vpc ? 1 : 0
 
-  identifier     = "${local.name_prefix}-postgres"
-  engine         = "postgres"
-  engine_version = "16"
-  instance_class = var.rds_instance_class
+  identifier                 = "${local.name_prefix}-postgres"
+  engine                     = "postgres"
+  engine_version             = "16"
+  auto_minor_version_upgrade = true
+  instance_class             = var.rds_instance_class
 
   allocated_storage = var.rds_allocated_storage_gb
   storage_type      = "gp3"
