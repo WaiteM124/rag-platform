@@ -1,0 +1,140 @@
+.home {
+  @apply flex flex-col gap-12 md:gap-16;
+}
+
+.home-hero {
+  @apply grid items-center gap-8 md:gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-12 xl:gap-14;
+}
+
+.home-hero-copy {
+  @apply flex max-w-xl flex-col justify-center gap-5 lg:max-w-[34rem] lg:gap-6;
+}
+
+.home-eyebrow {
+  @apply text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground;
+}
+
+.home-headline {
+  @apply text-[2rem] font-semibold leading-[1.1] tracking-tight text-foreground sm:text-4xl lg:text-[3.25rem] lg:leading-[1.06] xl:text-[3.5rem];
+}
+
+.home-subline {
+  @apply flex max-w-full flex-col gap-1 text-sm leading-relaxed text-muted-foreground sm:text-[0.9375rem] lg:flex-row lg:flex-nowrap lg:gap-x-0 lg:text-base;
+}
+
+.home-subline-part {
+  @apply block shrink-0;
+}
+
+@media (min-width: 1024px) {
+  .home-subline-part:not(:first-child)::before {
+    @apply mx-2.5 text-muted-foreground/45 content-['·'];
+  }
+}
+
+.home-hero-cta {
+  @apply pt-1;
+}
+
+.home-hero-visual {
+  @apply relative flex w-full items-center justify-center lg:justify-center;
+  @apply -mx-4 min-h-[min(88vw,32rem)] sm:-mx-2 lg:mx-0 lg:min-h-[34rem] lg:-mr-6 xl:-mr-10;
+}
+
+.hero-cylinder-root {
+  @apply aspect-square w-[min(132%,34rem)] max-w-none shrink-0 overflow-visible border-0 bg-transparent shadow-none;
+  min-height: min(92vw, 34rem);
+  margin-inline: auto;
+  -webkit-mask-image: radial-gradient(
+    ellipse 82% 82% at 50% 50%,
+    #000 32%,
+    rgb(0 0 0 / 0.65) 52%,
+    rgb(0 0 0 / 0.2) 68%,
+    transparent 76%
+  );
+  mask-image: radial-gradient(
+    ellipse 82% 82% at 50% 50%,
+    #000 32%,
+    rgb(0 0 0 / 0.65) 52%,
+    rgb(0 0 0 / 0.2) 68%,
+    transparent 76%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.hero-cylinder-root--placeholder {
+  @apply animate-pulse opacity-30;
+  background: transparent;
+}
+
+.hero-cylinder-root[data-state="fallback"] .hero-cylinder-fallback,
+.hero-cylinder-root canvas {
+  @apply block h-full w-full border-0 bg-transparent shadow-none outline-none;
+}
+
+.home-collections {
+  @apply pt-0;
+}
+
+.home-section-header {
+  @apply mb-6 flex flex-col gap-1.5;
+}
+
+.home-section-title {
+  @apply text-xl font-semibold tracking-tight text-foreground sm:text-2xl;
+}
+
+.home-section-lead {
+  @apply text-sm text-muted-foreground;
+}
+
+.home-collections-grid {
+  @apply grid gap-5 sm:grid-cols-2;
+}
+
+.home-collection-card {
+  @apply border-border/80 bg-card/50 shadow-none transition-colors duration-200;
+}
+
+.home-collection-card--active:hover {
+  @apply border-border bg-card;
+}
+
+.home-collection-card--soon {
+  @apply border-border/50 bg-card/30 opacity-80 shadow-none;
+}
+
+.home-collection-card--soon .home-collection-soon-title {
+  @apply text-base font-medium text-muted-foreground;
+}
+
+.home-how {
+  @apply border-t border-border/60 pt-10 md:pt-12;
+}
+
+.home-how-list {
+  @apply grid gap-8 sm:grid-cols-3 sm:gap-6 md:gap-8;
+}
+
+.home-how-item {
+  @apply flex items-baseline gap-2.5 sm:flex-col sm:items-start sm:gap-2;
+}
+
+.home-how-copy {
+  @apply max-w-[45ch] space-y-1;
+}
+
+.home-how-index {
+  @apply shrink-0 font-mono text-[0.625rem] font-normal leading-none tabular-nums tracking-wider text-muted-foreground/70;
+}
+
+.home-how-title {
+  @apply text-sm font-medium tracking-tight text-foreground/90;
+}
+
+.home-how-body {
+  @apply text-sm leading-relaxed text-muted-foreground/90;
+}
