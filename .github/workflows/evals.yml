@@ -86,6 +86,47 @@ jobs:
         continue-on-error: true
         run: make eval COLLECTION=complex-systems FAST=1
 
+      - name: Publish eval report
+        if: ${{ always() && vars.AWS_EVAL_ROLE_ARN != '' }}
+        run: |
+          set -euo pipefail
+          latest_md="$(ls -t evals/reports/*.md 2>/dev/null | head -1 || true)"
+          latest_json="$(ls -t evals/reports/*.json 2>/dev/null | head -1 || true)"
+          {
+            echo "## Complex Systems eval report"
+            echo ""
+            if [ -n "$latest_md" ]; then
+              cat "$latest_md"
+            else
+              echo "_No eval markdown report was produced._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$latest_md" ]; then
+            echo "----- $latest_md -----"
+            cat "$latest_md"
+          fi
+          if [ -n "$latest_json" ]; then
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from evals.run import _eval_summary_line
+
+          path = sorted(Path("evals/reports").glob("*.json"))[-1]
+          metrics = json.loads(path.read_text())
+          failing = metrics.get("failing") or []
+          passed = metrics.get("gate") == "PASS"
+          print(_eval_summary_line(metrics, failing, passed))
+          PY
+          fi
+
+      - name: Upload eval reports artifact
+        if: ${{ always() && vars.AWS_EVAL_ROLE_ARN != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-reports-${{ github.run_id }}
+          path: evals/reports/
+          if-no-files-found: warn
+
       - name: Notice when Bedrock eval unavailable
         if: steps.bedrock_eval.outcome == 'failure'
         run: |

@@ -10,6 +10,7 @@ COPY ingest ./ingest
 COPY collections ./collections
 COPY config ./config
 COPY app ./app
+COPY evals ./evals
 
 RUN pip install --no-cache-dir .
 

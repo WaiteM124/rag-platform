@@ -6,7 +6,7 @@ import psycopg
 from pgvector.psycopg import register_vector
 
 from app.core.rrf import reciprocal_rank_fusion
-from ingest.embed import embed_texts, to_vector
+from ingest.embed import embed_texts_with_usage, embedding_model_id, to_vector
 
 
 @dataclass(frozen=True)
@@ -25,6 +25,8 @@ class RetrievedChunk:
 class HybridRetriever:
     def __init__(self, dsn: str):
         self.dsn = dsn
+        self._last_embed_input_tokens = 0
+        self._last_embed_model_id = embedding_model_id()
 
     def retrieve(
         self,
@@ -35,7 +37,9 @@ class HybridRetriever:
         top_vector: int = 50,
         top_fused: int = 8,
     ) -> list[RetrievedChunk]:
-        [query_vec] = embed_texts([query])
+        [query_vec], embed_input_tokens = embed_texts_with_usage([query])
+        self._last_embed_input_tokens = embed_input_tokens
+        self._last_embed_model_id = embedding_model_id()
         with psycopg.connect(self.dsn) as conn:
             register_vector(conn)
             with conn.cursor() as cur:

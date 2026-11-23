@@ -110,7 +110,7 @@ def _invoke_model(client, model_id: str, body: str):
     return client.invoke_model(modelId=model_id, body=body)
 
 
-def _embed_one(text: str, model_id: str) -> list[float]:
+def _embed_one(text: str, model_id: str) -> tuple[list[float], int]:
     _rate_limiter.acquire()
     client = bedrock_runtime()
     body = json.dumps({"inputText": text[:25000], "dimensions": DIMENSIONS})
@@ -124,20 +124,44 @@ def _embed_one(text: str, model_id: str) -> list[float]:
     emb = payload.get("embedding") or payload.get("embeddingsByType", {}).get("float")
     if not emb:
         raise RuntimeError(f"Unexpected embedding response keys: {payload.keys()}")
-    return emb
+    tokens = int(
+        payload.get("inputTextTokenCount")
+        or payload.get("inputTokenCount")
+        or max(1, len(text.split()))
+    )
+    return emb, tokens
 
 
 def embed_texts(texts: list[str], model_id: str | None = None) -> list[list[float]]:
+    vectors, _ = embed_texts_with_usage(texts, model_id=model_id)
+    return vectors
+
+
+def embed_texts_with_usage(
+    texts: list[str], model_id: str | None = None
+) -> tuple[list[list[float]], int]:
     model_id = model_id or DEFAULT_MODEL
     if not texts:
-        return []
+        return [], 0
+    total_tokens = 0
     if EMBED_MAX_CONCURRENCY == 1:
-        return [_embed_one(text, model_id) for text in texts]
+        vectors: list[list[float]] = []
+        for text in texts:
+            vec, tok = _embed_one(text, model_id)
+            vectors.append(vec)
+            total_tokens += tok
+        return vectors, total_tokens
 
-    results: list[list[float] | None] = [None] * len(texts)
+    results: list[tuple[list[float], int] | None] = [None] * len(texts)
     with ThreadPoolExecutor(max_workers=EMBED_MAX_CONCURRENCY) as pool:
         futures = {pool.submit(_embed_one, text, model_id): idx for idx, text in enumerate(texts)}
         for future in as_completed(futures):
             idx = futures[future]
             results[idx] = future.result()
-    return [results[i] for i in range(len(texts))]  # type: ignore[misc]
+    vectors = [results[i][0] for i in range(len(texts))]  # type: ignore[index]
+    total_tokens = sum(results[i][1] for i in range(len(texts)))  # type: ignore[index]
+    return vectors, total_tokens
+
+
+def embedding_model_id() -> str:
+    return DEFAULT_MODEL

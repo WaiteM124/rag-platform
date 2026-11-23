@@ -70,8 +70,8 @@ test: lint-python test-unit ## Run linters and unit tests
 test-unit: ## Run unit tests
 	pytest -q tests/unit
 
-eval: ## Run eval harness (COLLECTION=complex-systems, FAST=1 optional)
-	python evals/run.py --collection $(COLLECTION) $(if $(FAST),--fast,)
+eval: ## Run eval harness (COLLECTION=complex-systems, FAST=1, GOLDEN=golden_live.jsonl)
+	python3 evals/run.py --collection $(COLLECTION) $(if $(FAST),--fast,) $(if $(GOLDEN),--golden $(GOLDEN),)
 
 test-integration: ## Run integration tests
 	@echo "TODO: pytest tests/integration"
