@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 6% 7%;
+    --foreground: 210 20% 96%;
+    --card: 240 5% 11%;
+    --card-foreground: 210 20% 96%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+    --muted: 240 4% 16%;
+    --muted-foreground: 215 16% 65%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 210 40% 98%;
+    --border: 240 4% 18%;
+    --input: 240 4% 18%;
+    --ring: 217 91% 60%;
+  }
+
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 240 6% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 6% 10%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 221 83% 53%;
+    --accent-foreground: 210 40% 98%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 221 83% 53%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.hljs {
+  @apply rounded-lg bg-muted p-4 text-sm overflow-x-auto;
+}
+
+.typing-cursor::after {
+  content: "▋";
+  @apply ml-0.5 text-primary animate-pulse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-cursor::after {
+    animation: none;
+  }
+}

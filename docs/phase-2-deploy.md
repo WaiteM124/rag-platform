@@ -1,5 +1,13 @@
 # Phase 2 deploy: rag.mileswaite.net
 
+## UI preview
+
+Portfolio-grade React UI (Tailwind + Radix/shadcn-style components, self-hosted Inter, dark-first with light toggle). Strict CSP — no CDN assets.
+
+| Dark (default) | Light |
+| --- | --- |
+| ![Phase 2 home — dark](screenshots/phase-2-dark.png) | ![Phase 2 home — light](screenshots/phase-2-light.png) |
+
 DNS is on **Cloudflare** (manual). Terraform does **not** create Route 53 records.
 
 ## Two-step HTTPS

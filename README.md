@@ -3,7 +3,15 @@
 Production-grade multi-collection RAG platform on AWS demonstrating end-to-end AI system operation: infrastructure as code, eval-gated CI/CD, licence-aware retrieval, tracing, and cost visibility.
 
 **Author:** Miles Waite  
-**Status:** Phase 1 (Complex Systems RAG core)
+**Status:** Phase 2 (public demo UI + API)
+
+### UI (Phase 2)
+
+| Dark (default) | Light |
+| --- | --- |
+| ![Phase 2 home — dark](docs/screenshots/phase-2-dark.png) | ![Phase 2 home — light](docs/screenshots/phase-2-light.png) |
+
+Tailwind + Radix primitives, self-hosted Inter, SSE chat with citations drawer, and strict CSP (no CDN).
 
 ## Architecture
 
@@ -132,11 +140,11 @@ rag-platform/
 - [x] Terraform: RDS + ECS ingest task + ECR (prod)
 
 ### Phase 2: Retrieval + API + v1 Live
-- [ ] Hybrid retrieval with RRF
-- [ ] FastAPI service with SSE
-- [ ] Response composer with licence enforcement
-- [ ] Minimal UI with collection selector
-- [ ] Deploy to production
+- [x] Hybrid retrieval with RRF
+- [x] FastAPI service with SSE
+- [x] Response composer with licence enforcement
+- [x] Portfolio UI with collection cards + streaming chat
+- [ ] Deploy to production (`rag.mileswaite.net`; see [docs/phase-2-deploy.md](docs/phase-2-deploy.md))
 
 ### Phase 3: Evals and CI Gates
 - [ ] Complex Systems golden set (~120 questions)
