@@ -23,6 +23,9 @@ class IngestSummary:
     unchanged: int = 0
     failed: int = 0
     chunks_added: int = 0
+    db_sources: int = 0
+    db_documents: int = 0
+    db_chunks: int = 0
     failed_ids: list[str] = field(default_factory=list)
 
     @property
@@ -35,6 +38,9 @@ class IngestSummary:
         if self.failed == self.attempted:
             return 1
         if self.failed > self.attempted / 2:
+            return 1
+        if self.chunks_added == 0 and self.db_chunks == 0:
+            logger.error("Ingest produced no chunks and collection has zero chunks in the database")
             return 1
         return 0
 
@@ -49,6 +55,13 @@ class IngestSummary:
             self.failed,
             self.chunks_added,
             failed_list,
+        )
+        logger.info(
+            "DB TOTALS collection=%s sources=%s documents=%s chunks=%s",
+            collection,
+            self.db_sources,
+            self.db_documents,
+            self.db_chunks,
         )
 
 
@@ -80,9 +93,120 @@ def ingest_collection(
                 logger.error("FAILED %s %s: %s", src.id, src.url, exc)
                 summary.failed += 1
                 summary.failed_ids.append(src.id)
+        summary.db_sources, summary.db_documents, summary.db_chunks = _collection_db_totals(
+            conn, collection
+        )
         conn.commit()
     summary.log_summary(collection)
     return summary
+
+
+def _collection_db_totals(conn: psycopg.Connection, collection: str) -> tuple[int, int, int]:
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT count(*) FROM sources WHERE collection = %s",
+            (collection,),
+        )
+        sources = cur.fetchone()[0]
+        cur.execute(
+            "SELECT count(*) FROM documents WHERE collection = %s",
+            (collection,),
+        )
+        documents = cur.fetchone()[0]
+        cur.execute(
+            "SELECT count(*) FROM chunks WHERE collection = %s",
+            (collection,),
+        )
+        chunks = cur.fetchone()[0]
+    return sources, documents, chunks
+
+
+def _source_is_fully_ingested(
+    cur: psycopg.Cursor,
+    source_id: str,
+    collection: str,
+    doc_hash: str,
+    embedding_model: str,
+) -> bool:
+    cur.execute(
+        """
+        SELECT d.content_hash
+        FROM documents d
+        WHERE d.source_id = %s AND d.collection = %s
+        ORDER BY d.document_id DESC
+        LIMIT 1
+        """,
+        (source_id, collection),
+    )
+    row = cur.fetchone()
+    if not row or row[0] != doc_hash:
+        return False
+    cur.execute(
+        """
+        SELECT 1
+        FROM chunks c
+        INNER JOIN documents d ON d.document_id = c.document_id
+        WHERE c.source_id = %s
+          AND d.content_hash = %s
+          AND c.collection = %s
+          AND c.embedding_model = %s
+        LIMIT 1
+        """,
+        (source_id, doc_hash, collection, embedding_model),
+    )
+    return cur.fetchone() is not None
+
+
+def _upsert_source(
+    cur: psycopg.Cursor,
+    src: SourceRecord,
+    collection: str,
+    doc_hash: str,
+) -> None:
+    cur.execute(
+        """
+        INSERT INTO sources (
+            source_id, collection, title, authors, year, source_url,
+            licence, licence_url, licence_class, nc_flag, nd_flag,
+            attribution_text, format, content_hash, updated_at
+        ) VALUES (
+            %s, %s, %s, %s, %s, %s,
+            %s, %s, %s, %s, %s,
+            %s, %s, %s, now()
+        )
+        ON CONFLICT (source_id) DO UPDATE SET
+            collection = EXCLUDED.collection,
+            title = EXCLUDED.title,
+            authors = EXCLUDED.authors,
+            year = EXCLUDED.year,
+            source_url = EXCLUDED.source_url,
+            licence = EXCLUDED.licence,
+            licence_url = EXCLUDED.licence_url,
+            licence_class = EXCLUDED.licence_class,
+            nc_flag = EXCLUDED.nc_flag,
+            nd_flag = EXCLUDED.nd_flag,
+            attribution_text = EXCLUDED.attribution_text,
+            format = EXCLUDED.format,
+            content_hash = EXCLUDED.content_hash,
+            updated_at = now()
+        """,
+        (
+            src.id,
+            collection,
+            src.title,
+            src.authors,
+            src.year,
+            src.url,
+            src.licence,
+            src.licence_url,
+            src.licence_class,
+            src.nc_flag,
+            src.nd_flag,
+            src.attribution_text,
+            src.format,
+            doc_hash,
+        ),
+    )
 
 
 def _ingest_one(
@@ -100,43 +224,11 @@ def _ingest_one(
     doc_hash = content_hash(markdown)
     chunks_added = 0
     with conn.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO sources (
-                source_id, collection, title, authors, year, source_url,
-                licence, licence_url, licence_class, nc_flag, nd_flag,
-                attribution_text, format, content_hash, updated_at
-            ) VALUES (
-                %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s,
-                %s, %s, %s, now()
-            )
-            ON CONFLICT (source_id) DO UPDATE SET
-                content_hash = EXCLUDED.content_hash,
-                updated_at = now()
-            RETURNING content_hash
-            """,
-            (
-                src.id,
-                collection,
-                src.title,
-                src.authors,
-                src.year,
-                src.url,
-                src.licence,
-                src.licence_url,
-                src.licence_class,
-                src.nc_flag,
-                src.nd_flag,
-                src.attribution_text,
-                src.format,
-                doc_hash,
-            ),
-        )
-        prev = cur.fetchone()
-        if prev and prev[0] == doc_hash:
+        if _source_is_fully_ingested(cur, src.id, collection, doc_hash, DEFAULT_MODEL):
+            _upsert_source(cur, src, collection, doc_hash)
             logger.info("Unchanged %s, skipping chunks", src.id)
             return "unchanged", 0
+        _upsert_source(cur, src, collection, doc_hash)
         cur.execute(
             """
             INSERT INTO documents (source_id, collection, normalised_text, content_hash)
