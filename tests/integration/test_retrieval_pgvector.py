@@ -95,7 +95,10 @@ def test_vector_distance_query(seeded_db):
             assert cur.fetchone() is not None
 
 
-@patch("app.core.retrieval.embed_texts", return_value=[[1.0] + [0.0] * 1023])
+@patch(
+    "app.core.retrieval.embed_texts_with_usage",
+    return_value=([[1.0] + [0.0] * 1023], 12),
+)
 def test_hybrid_retriever_vector_leg(mock_embed, seeded_db):
     retriever = HybridRetriever(seeded_db)
     chunks = retriever.retrieve(

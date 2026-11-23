@@ -28,7 +28,15 @@ def test_answer_engine_mocked(mock_converse):
 
         engine.composer = LicenceComposer()
         engine.prices = load_price_cards()
-        engine.retriever = type("R", (), {"retrieve": lambda *a, **k: [chunk]})()
+        engine.retriever = type(
+            "R",
+            (),
+            {
+                "retrieve": lambda *a, **k: [chunk],
+                "_last_embed_input_tokens": 8,
+                "_last_embed_model_id": "amazon.titan-embed-text-v2:0",
+            },
+        )()
 
     result = engine.answer("test?", collection="complex-systems")
     assert "Answer" in result.answer

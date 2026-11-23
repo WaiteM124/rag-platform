@@ -1,0 +1,179 @@
+name: Eval Live (Production RDS)
+
+on:
+  workflow_dispatch:
+    inputs:
+      collection:
+        description: Collection to evaluate
+        required: false
+        type: string
+        default: complex-systems
+      fast:
+        description: Run only fast=true golden items
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+jobs:
+  eval-live:
+    name: Production eval via ECS Fargate
+    runs-on: ubuntu-24.04-arm
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_APPLY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push ingest image (includes evals/)
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          ECR_REPOSITORY: rag-platform-ingest
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          IMAGE_BASE="$ECR_REGISTRY/$ECR_REPOSITORY"
+          docker build -f ingest/Dockerfile \
+            -t "$IMAGE_BASE:latest" \
+            -t "$IMAGE_BASE:$IMAGE_TAG" \
+            .
+          docker push "$IMAGE_BASE:latest"
+          docker push "$IMAGE_BASE:$IMAGE_TAG"
+
+      - name: Run Fargate eval task
+        env:
+          COLLECTION: ${{ inputs.collection }}
+          FAST_FLAG: ${{ inputs.fast }}
+          ANSWER_MODEL_ID: ${{ vars.ANSWER_MODEL_ID || 'qwen.qwen3-235b-a22b-2507-v1:0' }}
+          JUDGE_MODEL_ID: ${{ vars.JUDGE_MODEL_ID || 'deepseek.v3.2' }}
+        run: |
+          set -euo pipefail
+
+          CLUSTER="rag-platform-prod-cluster"
+          TASK_FAMILY="rag-platform-prod-ingest"
+          LOG_GROUP="/ecs/rag-platform-prod-ingest"
+          SG_NAME="rag-platform-prod-ecs-tasks-sg"
+
+          TASK_DEF_ARN="$(aws ecs list-task-definitions \
+            --family-prefix "$TASK_FAMILY" \
+            --sort DESC \
+            --max-items 1 \
+            --query 'taskDefinitionArns[0]' \
+            --output text)"
+          if [ -z "$TASK_DEF_ARN" ] || [ "$TASK_DEF_ARN" = "None" ]; then
+            echo "No task definition found for family $TASK_FAMILY"
+            exit 1
+          fi
+          echo "Task definition: $TASK_DEF_ARN"
+
+          SUBNET_IDS="$(aws ec2 describe-subnets \
+            --filters \
+              "Name=tag:Type,Values=public" \
+              "Name=tag:Project,Values=rag-platform" \
+              "Name=tag:Environment,Values=prod" \
+            --query 'Subnets[*].SubnetId' \
+            --output text | tr '\t' ' ')"
+          if [ -z "$SUBNET_IDS" ]; then
+            echo "No public subnets found"
+            exit 1
+          fi
+          SG_ID="$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=$SG_NAME" \
+            --query 'SecurityGroups[0].GroupId' \
+            --output text)"
+
+          CMD=(evals/run.py --collection "$COLLECTION" --golden golden_live.jsonl)
+          if [ "${FAST_FLAG}" = "true" ]; then
+            CMD+=(--fast)
+          fi
+
+          OVERRIDES="$(jq -n \
+            --arg name "ingest" \
+            --argjson cmd "$(printf '%s\n' python "${CMD[@]}" | jq -R . | jq -s .)" \
+            --arg answer "$ANSWER_MODEL_ID" \
+            --arg judge "$JUDGE_MODEL_ID" \
+            '{
+              containerOverrides: [{
+                name: $name,
+                command: $cmd,
+                environment: [
+                  {name: "ANSWER_MODEL_ID", value: $answer},
+                  {name: "JUDGE_MODEL_ID", value: $judge},
+                  {name: "RAG_ANSWER_MODEL_ID", value: $answer},
+                  {name: "RAG_JUDGE_MODEL_ID", value: $judge}
+                ]
+              }]
+            }')"
+
+          RUN_OUT="$(aws ecs run-task \
+            --cluster "$CLUSTER" \
+            --task-definition "$TASK_DEF_ARN" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[$(echo $SUBNET_IDS | sed 's/[[:space:]]\+/,/g')],securityGroups=[$SG_ID],assignPublicIp=ENABLED}" \
+            --overrides "$OVERRIDES")"
+
+          TASK_ARN="$(echo "$RUN_OUT" | jq -r '.tasks[0].taskArn')"
+          TASK_ID="${TASK_ARN##*/}"
+          echo "Started eval task: $TASK_ARN"
+
+          DEADLINE=$((SECONDS + 7200))
+          while [ "$SECONDS" -lt "$DEADLINE" ]; do
+            STATUS="$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
+              --query 'tasks[0].lastStatus' --output text)"
+            echo "Task status: $STATUS"
+            [ "$STATUS" = "STOPPED" ] && break
+            sleep 20
+          done
+
+          DESCRIBE="$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN")"
+          EXIT_CODE="$(echo "$DESCRIBE" | jq -r '.tasks[0].containers[0].exitCode // empty')"
+          LOG_STREAM="ingest/ingest/$TASK_ID"
+          LOGS="$(aws logs get-log-events \
+            --log-group-name "$LOG_GROUP" \
+            --log-stream-name "$LOG_STREAM" \
+            --limit 400 \
+            --output text \
+            --query 'events[*].message' 2>/dev/null || true)"
+          echo "$LOGS"
+
+          SUMMARY_LINE="$(echo "$LOGS" | grep -E '^EVAL SUMMARY ' | tail -1 || true)"
+          REPORT_MD="$(echo "$LOGS" | sed -n '/^# Eval report/,/^$/p' | head -n 40)"
+          {
+            echo "## Eval live (${COLLECTION})"
+            echo ""
+            if [ -n "$REPORT_MD" ]; then
+              echo "$REPORT_MD"
+            elif [ -n "$SUMMARY_LINE" ]; then
+              echo "\`$SUMMARY_LINE\`"
+            else
+              echo "_No report block found in CloudWatch logs._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -z "$SUMMARY_LINE" ]; then
+            echo "Missing EVAL SUMMARY line in logs"
+            exit 1
+          fi
+          echo "$SUMMARY_LINE"
+          if echo "$SUMMARY_LINE" | grep -q 'gate=FAIL'; then
+            echo "Eval gate failed"
+            exit 1
+          fi
+          if [ "${EXIT_CODE:-1}" != "0" ]; then
+            echo "Eval container exit code: ${EXIT_CODE:-unknown}"
+            exit 1
+          fi
