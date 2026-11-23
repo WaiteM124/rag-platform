@@ -173,25 +173,54 @@ rag-platform/
 ### Prerequisites
 
 - AWS account with appropriate permissions
-- Terraform ≥ 1.5
+- Terraform >= 1.10.0 (required for S3 lockfile support)
 - GitHub repository with Actions enabled
 
 ### Bootstrap (One-Time)
 
-Run in AWS CloudShell with administrator access:
+Run in AWS CloudShell with administrator access. CloudShell's bundled Terraform may be outdated, so install the required version first:
 
 ```bash
+# Install Terraform 1.17.2 into ~/bin
+mkdir -p ~/bin
+curl -fsSL https://releases.hashicorp.com/terraform/1.17.2/terraform_1.17.2_linux_amd64.zip -o /tmp/terraform.zip
+unzip -o /tmp/terraform.zip -d ~/bin
+rm /tmp/terraform.zip
+export PATH="$HOME/bin:$PATH"
+terraform version  # Should show: Terraform v1.17.2
+
+# Clone and apply bootstrap
 git clone https://github.com/WaiteM124/rag-platform.git
 cd rag-platform/terraform/bootstrap
 terraform init
+terraform plan -var="alert_email=your-email@example.com"
 terraform apply -var="alert_email=your-email@example.com"
+terraform output
 ```
 
-Then set GitHub repository variables from the outputs:
-- `AWS_REGION` = `eu-west-2`
-- `AWS_PLAN_ROLE_ARN` = (from bootstrap output)
-- `AWS_APPLY_ROLE_ARN` = (from bootstrap output)
-- `TF_STATE_BUCKET` = (from bootstrap output)
+### Configure GitHub (Required)
+
+#### 1. Create the `production` Environment
+
+The apply role trusts only the `production` GitHub environment:
+
+1. Go to: **GitHub repo → Settings → Environments → New environment**
+2. Name: `production`
+3. Configure protection rules:
+   - **Deployment branches**: Select "Selected branches" → Add `main`
+   - **Required reviewers** (optional): Add reviewers for manual approval
+4. Click **Save protection rules**
+
+#### 2. Set Repository Variables
+
+Go to: **GitHub repo → Settings → Secrets and variables → Actions → Variables**
+
+| Variable | Value |
+|----------|-------|
+| `AWS_REGION` | `eu-west-2` |
+| `TF_STATE_BUCKET` | `terraform output state_bucket_name` |
+| `AWS_PLAN_ROLE_ARN` | `terraform output plan_role_arn` |
+| `AWS_APPLY_ROLE_ARN` | `terraform output apply_role_arn` |
 
 ### Development
 
@@ -214,9 +243,17 @@ make plan ENV=prod
 
 - **No secrets in repo**: All credentials in AWS Secrets Manager
 - **OIDC authentication**: No long-lived AWS keys in GitHub
+- **Least-privilege CI roles**:
+  - Plan role trusts only `pull_request` events
+  - Apply role trusts only `environment:production` (requires GitHub environment)
+  - IAM writes scoped to `rag-platform-*` resources only
+  - Self-modification explicitly denied (roles cannot modify themselves)
+  - `iam:PassRole` restricted to ECS tasks only
 - **Licence compliance**: Automated enforcement of source licences
 - **Input validation**: Rate limits, size caps, spend caps
 - **Tracing**: Full observability via Langfuse
+
+See `docs/build-plan.md` §7 for the full threat model.
 
 ## Licence
 

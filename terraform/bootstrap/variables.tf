@@ -34,8 +34,3 @@ variable "budget_limit" {
   default     = 50
 }
 
-variable "aws_account_id" {
-  description = "AWS account ID (used in examples/documentation only)"
-  type        = string
-  default     = "762771090975"
-}

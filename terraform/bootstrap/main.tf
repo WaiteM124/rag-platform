@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.10.0"
 
   required_providers {
     aws = {
@@ -114,11 +114,10 @@ data "aws_iam_policy_document" "github_actions_plan_trust" {
     }
 
     condition {
-      test     = "StringLike"
+      test     = "StringEquals"
       variable = "${local.github_oidc_provider_url}:sub"
       values = [
-        "repo:${var.github_org}/${var.github_repo}:pull_request",
-        "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/*"
+        "repo:${var.github_org}/${var.github_repo}:pull_request"
       ]
     }
   }
@@ -148,6 +147,7 @@ data "aws_iam_policy_document" "github_actions_plan_permissions" {
     effect = "Allow"
     actions = [
       "s3:PutObject",
+      "s3:DeleteObject",
     ]
     resources = [
       "${aws_s3_bucket.tfstate.arn}/*.tflock",
@@ -226,7 +226,7 @@ data "aws_iam_policy_document" "github_actions_apply_trust" {
       test     = "StringEquals"
       variable = "${local.github_oidc_provider_url}:sub"
       values = [
-        "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/main"
+        "repo:${var.github_org}/${var.github_repo}:environment:production"
       ]
     }
   }
@@ -300,31 +300,108 @@ data "aws_iam_policy_document" "github_actions_apply_permissions" {
   }
 
   statement {
-    sid    = "IAMManagement"
+    sid    = "IAMReadOnly"
     effect = "Allow"
     actions = [
       "iam:GetRole",
+      "iam:GetRolePolicy",
+      "iam:GetPolicy",
+      "iam:GetPolicyVersion",
+      "iam:ListAttachedRolePolicies",
+      "iam:ListRolePolicies",
+      "iam:ListPolicyVersions",
+      "iam:GetOpenIDConnectProvider",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "IAMRoleManagement"
+    effect = "Allow"
+    actions = [
       "iam:CreateRole",
       "iam:DeleteRole",
       "iam:UpdateRole",
       "iam:TagRole",
       "iam:UntagRole",
-      "iam:GetRolePolicy",
       "iam:PutRolePolicy",
       "iam:DeleteRolePolicy",
       "iam:AttachRolePolicy",
       "iam:DetachRolePolicy",
-      "iam:ListAttachedRolePolicies",
-      "iam:ListRolePolicies",
+    ]
+    resources = [
+      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-*",
+    ]
+  }
+
+  statement {
+    sid    = "IAMPolicyManagement"
+    effect = "Allow"
+    actions = [
       "iam:CreatePolicy",
       "iam:DeletePolicy",
-      "iam:GetPolicy",
-      "iam:GetPolicyVersion",
-      "iam:ListPolicyVersions",
-      "iam:CreateServiceLinkedRole",
+      "iam:CreatePolicyVersion",
+      "iam:DeletePolicyVersion",
+    ]
+    resources = [
+      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${var.project_name}-*",
+    ]
+  }
+
+  statement {
+    sid    = "DenySelfModification"
+    effect = "Deny"
+    actions = [
+      "iam:CreateRole",
+      "iam:DeleteRole",
+      "iam:UpdateRole",
+      "iam:TagRole",
+      "iam:UntagRole",
+      "iam:PutRolePolicy",
+      "iam:DeleteRolePolicy",
+      "iam:AttachRolePolicy",
+      "iam:DetachRolePolicy",
+      "iam:UpdateAssumeRolePolicy",
+    ]
+    resources = [
+      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-plan",
+      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-apply",
+    ]
+  }
+
+  statement {
+    sid    = "IAMPassRole"
+    effect = "Allow"
+    actions = [
       "iam:PassRole",
     ]
+    resources = [
+      "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${var.project_name}-*",
+    ]
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PassedToService"
+      values   = ["ecs-tasks.amazonaws.com"]
+    }
+  }
+
+  statement {
+    sid    = "IAMServiceLinkedRoles"
+    effect = "Allow"
+    actions = [
+      "iam:CreateServiceLinkedRole",
+    ]
     resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "iam:AWSServiceName"
+      values = [
+        "ecs.amazonaws.com",
+        "rds.amazonaws.com",
+        "elasticloadbalancing.amazonaws.com",
+        "application-autoscaling.amazonaws.com",
+      ]
+    }
   }
 
   statement {
@@ -453,11 +530,6 @@ resource "aws_budgets_budget" "monthly" {
   limit_unit   = "USD"
   time_unit    = "MONTHLY"
 
-  cost_filter {
-    name   = "TagKeyValue"
-    values = ["user:Project$${var.project_name}"]
-  }
-
   notification {
     comparison_operator        = "GREATER_THAN"
     notification_type          = "ACTUAL"
@@ -477,6 +549,14 @@ resource "aws_budgets_budget" "monthly" {
   notification {
     comparison_operator        = "GREATER_THAN"
     notification_type          = "ACTUAL"
+    threshold                  = 100
+    threshold_type             = "PERCENTAGE"
+    subscriber_email_addresses = [var.alert_email]
+  }
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    notification_type          = "FORECASTED"
     threshold                  = 100
     threshold_type             = "PERCENTAGE"
     subscriber_email_addresses = [var.alert_email]
