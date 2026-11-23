@@ -5,6 +5,7 @@ import os
 from functools import lru_cache
 
 import boto3
+from botocore.config import Config
 
 USER_AGENT = (
     "rag-platform/0.1 (+https://github.com/WaiteM124/rag-platform; Complex-Systems-RAG-ingest)"
@@ -16,7 +17,8 @@ CACHE_DIR = os.environ.get("RAG_INGEST_CACHE", "/tmp/rag-platform-ingest-cache")
 @lru_cache(maxsize=1)
 def bedrock_runtime():
     region = os.environ.get("AWS_REGION", "eu-west-2")
-    return boto3.client("bedrock-runtime", region_name=region)
+    config = Config(retries={"mode": "adaptive", "max_attempts": 10})
+    return boto3.client("bedrock-runtime", region_name=region, config=config)
 
 
 def db_dsn() -> str:

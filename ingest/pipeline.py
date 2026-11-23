@@ -1,18 +1,28 @@
 from __future__ import annotations
 
 import logging
+import os
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 
 import psycopg
 from pgvector.psycopg import register_vector
 
 from ingest.chunking import chunk_markdown, content_hash
 from ingest.config import CACHE_DIR, db_dsn
-from ingest.embed import DEFAULT_MODEL, embed_texts, to_vector
+from ingest.embed import (
+    DEFAULT_MODEL,
+    EmbeddingThrottledError,
+    embed_texts,
+    get_embed_stats,
+    to_vector,
+)
 from ingest.fetchers.router import fetch_source_markdown
 from ingest.licence import SourceRecord, load_sources
 from ingest.migrations.runner import run_migrations
+from ingest.normalise import normalise_text
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +37,8 @@ class IngestSummary:
     db_documents: int = 0
     db_chunks: int = 0
     failed_ids: list[str] = field(default_factory=list)
+    embed_calls: int = 0
+    throttle_retries: int = 0
 
     @property
     def attempted(self) -> int:
@@ -48,12 +60,14 @@ class IngestSummary:
         failed_list = ", ".join(self.failed_ids) if self.failed_ids else "none"
         logger.info(
             "INGEST SUMMARY collection=%s ok=%s unchanged=%s failed=%s "
-            "chunks_added=%s failed_ids=%s",
+            "chunks_added=%s embed_calls=%s throttle_retries=%s failed_ids=%s",
             collection,
             self.ok,
             self.unchanged,
             self.failed,
             self.chunks_added,
+            self.embed_calls,
+            self.throttle_retries,
             failed_list,
         )
         logger.info(
@@ -63,6 +77,56 @@ class IngestSummary:
             self.db_documents,
             self.db_chunks,
         )
+
+
+@dataclass(frozen=True)
+class _SourceOutcome:
+    status: str
+    chunks: int = 0
+    src_id: str | None = None
+    error: str | None = None
+
+
+def _try_ingest_source(
+    conn: psycopg.Connection,
+    src: SourceRecord,
+    collection: str,
+    cache: Path,
+) -> _SourceOutcome | Literal["throttled"]:
+    try:
+        with conn.transaction():
+            status, chunks = _ingest_one(conn, src, collection, cache)
+        return _SourceOutcome(status, chunks=chunks)
+    except EmbeddingThrottledError as exc:
+        logger.warning("Throttled %s, deferring to retry pass: %s", src.id, exc)
+        return "throttled"
+    except Exception as exc:
+        logger.error("FAILED %s %s: %s", src.id, src.url, exc)
+        return _SourceOutcome("failed", src_id=src.id, error=str(exc))
+
+
+def _apply_ingest_outcome(summary: IngestSummary, outcome: _SourceOutcome) -> None:
+    if outcome.status == "unchanged":
+        summary.unchanged += 1
+    elif outcome.status == "ok":
+        summary.ok += 1
+        summary.chunks_added += outcome.chunks
+    elif outcome.status == "failed":
+        summary.failed += 1
+        if outcome.src_id:
+            summary.failed_ids.append(outcome.src_id)
+
+
+def _load_normalised_markdown(src: SourceRecord, cache: Path) -> str:
+    cache_file = cache / f"{src.id}.md"
+    if cache_file.exists():
+        raw = cache_file.read_text(encoding="utf-8")
+    else:
+        raw = fetch_source_markdown(src)
+    markdown = normalise_text(raw)
+    if markdown != raw or not cache_file.exists():
+        cache_file.write_text(markdown, encoding="utf-8")
+    return markdown
 
 
 def ingest_collection(
@@ -78,25 +142,38 @@ def ingest_collection(
     cache = Path(CACHE_DIR)
     cache.mkdir(parents=True, exist_ok=True)
     summary = IngestSummary()
+    throttle_queue: list[SourceRecord] = []
     with psycopg.connect(db_dsn()) as conn:
         register_vector(conn)
         for src in sources:
-            try:
-                with conn.transaction():
-                    status, chunks = _ingest_one(conn, src, collection, cache)
-                if status == "unchanged":
-                    summary.unchanged += 1
+            outcome = _try_ingest_source(conn, src, collection, cache)
+            if outcome == "throttled":
+                throttle_queue.append(src)
+            else:
+                _apply_ingest_outcome(summary, outcome)
+
+        if throttle_queue:
+            pause = int(os.environ.get("EMBED_THROTTLE_RETRY_PAUSE_SEC", "30"))
+            logger.info(
+                "Throttle retry pass: sleeping %ss before retrying %s sources",
+                pause,
+                len(throttle_queue),
+            )
+            time.sleep(pause)
+            for src in throttle_queue:
+                outcome = _try_ingest_source(conn, src, collection, cache)
+                if outcome == "throttled":
+                    _apply_ingest_outcome(summary, _SourceOutcome("failed", src_id=src.id))
                 else:
-                    summary.ok += 1
-                summary.chunks_added += chunks
-            except Exception as exc:
-                logger.error("FAILED %s %s: %s", src.id, src.url, exc)
-                summary.failed += 1
-                summary.failed_ids.append(src.id)
+                    _apply_ingest_outcome(summary, outcome)
+
         summary.db_sources, summary.db_documents, summary.db_chunks = _collection_db_totals(
             conn, collection
         )
         conn.commit()
+    embed_stats = get_embed_stats()
+    summary.embed_calls = embed_stats["calls"]
+    summary.throttle_retries = embed_stats["throttle_retries"]
     summary.log_summary(collection)
     return summary
 
@@ -215,12 +292,7 @@ def _ingest_one(
     collection: str,
     cache: Path,
 ) -> tuple[str, int]:
-    cache_file = cache / f"{src.id}.md"
-    if cache_file.exists():
-        markdown = cache_file.read_text(encoding="utf-8")
-    else:
-        markdown = fetch_source_markdown(src)
-        cache_file.write_text(markdown, encoding="utf-8")
+    markdown = _load_normalised_markdown(src, cache)
     doc_hash = content_hash(markdown)
     chunks_added = 0
     with conn.cursor() as cur:
