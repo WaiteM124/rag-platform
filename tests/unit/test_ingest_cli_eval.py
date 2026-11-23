@@ -13,6 +13,7 @@ def test_ingest_eval_forwards_to_eval_runner(mock_eval_main):
             "--golden",
             "golden_live.jsonl",
             "--fast",
+            "--require-judge",
         ]
     )
     assert code == 0
@@ -23,6 +24,7 @@ def test_ingest_eval_forwards_to_eval_runner(mock_eval_main):
             "--golden",
             "golden_live.jsonl",
             "--fast",
+            "--require-judge",
         ]
     )
 

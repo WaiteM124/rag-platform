@@ -13,6 +13,8 @@ def _eval_runner_argv(args: argparse.Namespace) -> list[str]:
     out: list[str] = ["--collection", args.collection, "--golden", args.golden]
     if args.fast:
         out.append("--fast")
+    if args.require_judge:
+        out.append("--require-judge")
     if args.dsn:
         out.extend(["--dsn", args.dsn])
     if args.eval_extra:
@@ -35,6 +37,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Golden file under evals/<collection>/",
     )
     eval_p.add_argument("--fast", action="store_true")
+    eval_p.add_argument(
+        "--require-judge",
+        action="store_true",
+        help="Fail if Bedrock judge credentials are unavailable",
+    )
     eval_p.add_argument(
         "--dsn",
         default="",
