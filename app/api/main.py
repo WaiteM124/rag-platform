@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from app.api.citations import build_citations
 from app.api.langfuse_trace import init_langfuse_at_startup, maybe_trace
+from app.api.logging_config import configure_app_logging
 from app.api.metrics import emit_daily_spend_gbp
 from app.api.rate_limit import client_ip, rate_limited
 from app.api.request_log import build_metrics_log_line, emit_request_metrics_log
@@ -57,6 +58,8 @@ class AskBody(BaseModel):
 
 @app.on_event("startup")
 def on_startup() -> None:
+    # Uvicorn defaults root logging to WARNING; surface app INFO to CloudWatch.
+    configure_app_logging()
     try:
         run_migrations(db_dsn())
     except Exception:
