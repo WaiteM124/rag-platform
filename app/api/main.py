@@ -19,7 +19,7 @@ from app.api.langfuse_trace import maybe_trace
 from app.api.metrics import emit_daily_spend_gbp
 from app.api.rate_limit import client_ip, rate_limited
 from app.api.request_log import build_metrics_log_line, emit_request_metrics_log
-from app.api.settings import get_settings
+from app.api.settings import get_settings, warn_langfuse_placeholder_once
 from app.api.spend import record_spend_gbp, spend_cap_exceeded, spend_today_gbp
 from app.api.stage_timer import StageTimer
 from app.core.answer import SYSTEM_PROMPT, AnswerEngine
@@ -59,6 +59,11 @@ def on_startup() -> None:
         run_migrations(db_dsn())
     except Exception:
         logger.exception("Migration startup failed")
+    # Warn once if Terraform placeholders are still in Secrets Manager.
+    warn_langfuse_placeholder_once(
+        os.environ.get("LANGFUSE_PUBLIC_KEY", ""),
+        os.environ.get("LANGFUSE_SECRET_KEY", ""),
+    )
 
 
 @app.middleware("http")

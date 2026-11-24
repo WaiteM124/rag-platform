@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
-from app.api.settings import get_settings
+from app.api.settings import get_settings, langfuse_keys_configured
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ def maybe_trace(
 ) -> Iterator[RequestTrace | _NoOpObservation]:
     """Yield a RequestTrace when keys are set; otherwise a no-op observation."""
     settings = get_settings()
-    if not settings.langfuse_public_key or not settings.langfuse_secret_key:
+    if not langfuse_keys_configured(settings.langfuse_public_key, settings.langfuse_secret_key):
         yield _NoOpObservation()
         return
 
