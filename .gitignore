@@ -81,6 +81,10 @@ docker-compose.override.yml
 *.log
 logs/
 
+# Generated benchmark output (markdown template is committed; JSON is not)
+docs/performance.json
+benchmark-console.txt
+
 # OS
 Thumbs.db
 

@@ -5,7 +5,12 @@ from pathlib import Path
 
 from app.core.bedrock import ANSWER_MODEL, converse
 from app.core.composer import LicenceComposer, validate_citations
-from app.core.cost import TokenUsage, load_price_cards
+from app.core.cost import (
+    TokenUsage,
+    combine_costs,
+    estimate_embed_cost,
+    load_price_cards,
+)
 from app.core.retrieval import HybridRetriever, RetrievedChunk
 from ingest.embed import embedding_model_id
 
@@ -26,14 +31,19 @@ class AnswerResult:
     embed_input_tokens: int = 0
     embed_model_id: str = ""
 
-    def query_cost_usd(self, price_cards: dict) -> float:
-        """Answer generation + query embedding only (excludes judge)."""
-        embed_card = price_cards.get(self.embed_model_id or embedding_model_id(), {})
-        embed_rate = embed_card.get("input_per_1k")
-        embed_cost = 0.0
-        if embed_rate is not None:
-            embed_cost = (self.embed_input_tokens / 1000.0) * float(embed_rate)
-        return self.cost_usd + embed_cost
+    def query_cost_usd(self, price_cards: dict) -> float | None:
+        """Answer generation + query embedding only (excludes judge).
+
+        Returns None when any component price is unverified.
+        """
+        embed_est = estimate_embed_cost(
+            self.embed_input_tokens,
+            self.embed_model_id or embedding_model_id(),
+            price_cards,
+        )
+        gen_est = self.usage.estimate_cost(price_cards)
+        total = combine_costs(embed_est, gen_est)
+        return total.usd
 
 
 class AnswerEngine:

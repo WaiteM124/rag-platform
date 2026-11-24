@@ -1,9 +1,43 @@
 from __future__ import annotations
 
+import logging
 import os
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
+
+# Terraform seeds Secrets Manager with this placeholder until the owner fills keys.
+_LANGFUSE_PLACEHOLDER = "REPLACE_ME"
+
+
+def normalize_langfuse_key(value: str | None) -> str:
+    """Return a usable Langfuse key, or '' if blank / whitespace / placeholder."""
+    if value is None:
+        return ""
+    cleaned = value.strip()
+    if not cleaned:
+        return ""
+    if cleaned.casefold() == _LANGFUSE_PLACEHOLDER.casefold():
+        return ""
+    return cleaned
+
+
+def langfuse_keys_configured(public_key: str, secret_key: str) -> bool:
+    return bool(normalize_langfuse_key(public_key) and normalize_langfuse_key(secret_key))
+
+
+def warn_langfuse_placeholder_once(public_key: str, secret_key: str) -> None:
+    """Log a single warning when Terraform placeholders are still in place."""
+    raw_public = (public_key or "").strip()
+    raw_secret = (secret_key or "").strip()
+    placeholder = _LANGFUSE_PLACEHOLDER.casefold()
+    if raw_public.casefold() == placeholder or raw_secret.casefold() == placeholder:
+        logger.warning(
+            "Langfuse keys are still the Terraform placeholder (REPLACE_ME); "
+            "tracing disabled until real keys are set in Secrets Manager"
+        )
 
 
 class Settings(BaseSettings):
@@ -29,14 +63,21 @@ class Settings(BaseSettings):
 
     model_config = {"env_prefix": "", "extra": "ignore"}
 
+    @property
+    def langfuse_enabled(self) -> bool:
+        return langfuse_keys_configured(self.langfuse_public_key, self.langfuse_secret_key)
+
 
 @lru_cache
 def get_settings() -> Settings:
     cap = os.environ.get("DAILY_SPEND_CAP_GBP")
+    raw_public = os.environ.get("LANGFUSE_PUBLIC_KEY", "")
+    raw_secret = os.environ.get("LANGFUSE_SECRET_KEY", "")
     settings = Settings(
         daily_spend_cap_gbp=float(cap) if cap else 2.0,
-        langfuse_public_key=os.environ.get("LANGFUSE_PUBLIC_KEY", ""),
-        langfuse_secret_key=os.environ.get("LANGFUSE_SECRET_KEY", ""),
+        langfuse_public_key=normalize_langfuse_key(raw_public),
+        langfuse_secret_key=normalize_langfuse_key(raw_secret),
+        langfuse_host=os.environ.get("LANGFUSE_HOST", "https://cloud.langfuse.com"),
         https_enabled=os.environ.get("HTTPS_ENABLED", "").lower() in ("1", "true", "yes"),
     )
     return settings
