@@ -1,0 +1,19 @@
+---
+description: Non-negotiable RAG platform rules for all changes
+alwaysApply: true
+---
+
+# RAG platform core rules
+
+Canonical detail: `AGENTS.md`.
+
+- **Public repo.** No secrets, keys, or hardcoded AWS account IDs. Never log Langfuse or other key values. Secrets go in AWS Secrets Manager via Terraform.
+- **No client material.** Never use client code or data; never name client systems or projects.
+- **Licence-aware retrieval.** Every chunk has a licence class. Full text only for open licences (OGL, CC BY, similar). Class C: short capped excerpts + link out. Do not weaken or bypass `app/core/composer.py`; changes need tests.
+- **Collections stay separate** (UK Tax, Complex Systems) with per-collection eval gates. Do not merge if scores drop below threshold.
+- **Terraform-only infra** in `terraform/envs/prod` (plus bootstrap). No console resource changes.
+- **Never invent metrics.** Cost/latency from `scripts/benchmark.py` or Langfuse; prices from `config/prices.yaml` (AWS Price List verified).
+- **Retrieved text is untrusted.** Keep the prompt-injection suite and output guard in place.
+- **Miles merges.** Agents do not merge or trigger workflow runs without go-ahead.
+- Do not weaken tests or eval thresholds to green CI. Keep PRs small and scoped. When rules conflict, `AGENTS.md` wins.
+- Do not add lint/test/eval GitHub workflows; seven workflows already exist. Avoid path changes that unnecessarily fire `terraform.yml` / `deploy.yml`.

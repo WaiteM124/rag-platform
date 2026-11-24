@@ -1,0 +1,16 @@
+---
+description: Terraform and infra standards for this repo
+globs: terraform/**/*.tf,terraform/**/*.md,terraform/**/*.hcl
+alwaysApply: false
+---
+
+# Terraform standards
+
+Canonical detail: `AGENTS.md`.
+
+- All AWS infrastructure is code under `terraform/bootstrap/` (one-time) and `terraform/envs/prod/` (ongoing). Modules live in `terraform/modules/`.
+- **No console-driven resource changes.** Wire secrets through Secrets Manager resources and ECS task definitions — never commit secret values or AWS account IDs.
+- Prefer `data.aws_caller_identity` over hardcoded account IDs. GitHub OIDC trust pins immutable owner/repo numeric IDs (not secrets, but do not invent new ones casually).
+- CI already runs via `.github/workflows/terraform.yml` (fmt, validate, tflint, plan on PR; apply on `main` with `environment: production`). Do not add another Terraform workflow.
+- Edits under `terraform/**` fire Terraform CI; successful apply on `main` can chain to **Deploy Web**. Keep infra PRs intentional and small.
+- Before finishing: `terraform fmt -check -recursive terraform/`, `make validate` / local `terraform validate`, and tflint when available.

@@ -204,6 +204,10 @@ in the UI also shows a compact `took X ms, ~$Y` line from server-side `metrics`.
 | Bedrock (3,000 queries/mo) | $2 |
 | **Total** | **~$70-80/mo** |
 
+## Contributing
+
+Agent and human contributor rules (RAG non-negotiables, existing CI map, eval gates): see [AGENTS.md](AGENTS.md) and [CONTRIBUTING.md](CONTRIBUTING.md). Architecture decisions: [docs/decisions/](docs/decisions/).
+
 ## Getting Started
 
 ### Prerequisites
