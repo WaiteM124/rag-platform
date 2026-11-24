@@ -29,8 +29,7 @@ class LicenceComposer:
         for ch in chunks:
             if ch.licence_class != "C":
                 continue
-            overlap = _longest_shared_substring(answer, ch.text)
-            if len(overlap) > MAX_CLASS_C_CHARS:
+            if _exceeds_class_c_quote(answer, ch.text, MAX_CLASS_C_CHARS):
                 compliant = False
                 answer = _cap_class_c_quote(answer, ch)
         return answer, compliant
@@ -46,15 +45,23 @@ def validate_citations(answer: str, chunk_count: int) -> bool:
     return all(1 <= r <= chunk_count for r in refs)
 
 
-def _longest_shared_substring(a: str, b: str) -> str:
-    a, b = a.lower(), b.lower()
-    best = ""
-    for i in range(len(a)):
-        for j in range(i + 1, len(a) + 1):
-            frag = a[i:j]
-            if len(frag) > len(best) and frag in b:
-                best = frag
-    return best
+def _exceeds_class_c_quote(answer: str, source: str, limit: int = MAX_CLASS_C_CHARS) -> bool:
+    """True if answer shares a contiguous quote longer than ``limit`` with source.
+
+    Uses fixed-length n-gram membership (n = limit + 1) instead of the previous
+    O(n²×m) longest-common-substring scan, which could take tens of seconds on
+    long Class-C chunks and starve the SSE connection past the ALB idle timeout.
+    """
+    a = answer.lower()
+    b = source.lower()
+    n = limit + 1
+    if len(a) < n or len(b) < n:
+        return False
+    grams = {b[i : i + n] for i in range(len(b) - n + 1)}
+    for i in range(len(a) - n + 1):
+        if a[i : i + n] in grams:
+            return True
+    return False
 
 
 def _cap_class_c_quote(answer: str, ch: RetrievedChunk) -> str:

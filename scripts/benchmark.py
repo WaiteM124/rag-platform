@@ -14,6 +14,7 @@ import statistics
 import subprocess
 import sys
 import time
+import traceback
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -24,7 +25,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_GOLDEN = REPO_ROOT / "evals" / "complex-systems" / "golden.jsonl"
 DEFAULT_OUT_MD = REPO_ROOT / "docs" / "performance.md"
 DEFAULT_OUT_JSON = REPO_ROOT / "docs" / "performance.json"
-BENCHMARK_VERSION = "1"
+BENCHMARK_VERSION = "2"
+FAILURE_RATE_EXIT_THRESHOLD = 0.20
 
 
 def percentile(values: list[float], p: float) -> float | None:
@@ -99,6 +101,7 @@ def ask_once(base_url: str, collection: str, question: str, timeout: float) -> d
         raise RuntimeError("no SSE done event in response")
     metrics = done.get("metrics") or {}
     return {
+        "ok": True,
         "client_e2e_ms": round(client_ms, 3),
         "metrics": metrics,
         "latency_ms": done.get("latency_ms"),
@@ -109,11 +112,14 @@ def ask_once(base_url: str, collection: str, question: str, timeout: float) -> d
     }
 
 
-def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    e2e = [float(r["client_e2e_ms"]) for r in rows]
+def summarise(
+    successes: list[dict[str, Any]],
+    failures: list[dict[str, Any]],
+) -> dict[str, Any]:
+    e2e = [float(r["client_e2e_ms"]) for r in successes]
     costs = [
         float(r["cost_usd"])
-        for r in rows
+        for r in successes
         if r.get("cost_usd") is not None and r.get("cost_status") != "unverified"
     ]
     stage_names = [
@@ -121,13 +127,14 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "vector_retrieval",
         "prompt_build",
         "generation",
+        "stream_to_client",
         "output_guard",
     ]
     stages: dict[str, dict[str, float | None]] = {}
     for name in stage_names:
         vals = [
             float(r["stages_ms"][name])
-            for r in rows
+            for r in successes
             if isinstance(r.get("stages_ms"), dict) and name in r["stages_ms"]
         ]
         stages[name] = {
@@ -138,13 +145,25 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
         }
 
     models = {}
-    for r in rows:
+    for r in successes:
         for k, v in (r.get("models") or {}).items():
             models.setdefault(k, v)
 
+    attempted = len(successes) + len(failures)
+    fail_n = len(failures)
+    fail_rate = (fail_n / attempted) if attempted else 0.0
+    by_type: dict[str, int] = {}
+    for f in failures:
+        key = f.get("error_type") or "Unknown"
+        by_type[key] = by_type.get(key, 0) + 1
+
     return {
         "benchmark_version": BENCHMARK_VERSION,
-        "n": len(rows),
+        "n": len(successes),
+        "n_attempted": attempted,
+        "n_failed": fail_n,
+        "failure_rate": round(fail_rate, 4),
+        "failures_by_type": by_type,
         "models": models,
         "client_e2e_ms": {
             "p50": percentile(e2e, 50),
@@ -156,7 +175,7 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "mean": statistics.fmean(costs) if costs else None,
             "p95": percentile(costs, 95),
             "n_verified": len(costs),
-            "n_unverified": sum(1 for r in rows if r.get("cost_status") == "unverified"),
+            "n_unverified": sum(1 for r in successes if r.get("cost_status") == "unverified"),
         },
     }
 
@@ -174,10 +193,26 @@ def render_markdown(summary: dict[str, Any], *, base_url: str, sha: str, ts: str
         "| --- | --- |",
         f"| Run timestamp (UTC) | {ts} |",
         f"| Commit SHA | `{sha}` |",
-        f"| Sample size | {summary['n']} |",
+        f"| Sample size (ok) | {summary['n']} |",
+        f"| Attempted | {summary.get('n_attempted', summary['n'])} |",
+        f"| Failed | {summary.get('n_failed', 0)} "
+        f"({100.0 * float(summary.get('failure_rate') or 0):.1f}%) |",
         f"| Base URL | {base_url} |",
         f"| Answer model | `{models.get('generation', 'n/a')}` |",
         f"| Embedding model | `{models.get('embedding', 'n/a')}` |",
+        "",
+        "## Failures",
+        "",
+        "| Error type | Count |",
+        "| --- | --- |",
+    ]
+    by_type = summary.get("failures_by_type") or {}
+    if by_type:
+        for name, count in sorted(by_type.items()):
+            lines.append(f"| `{name}` | {count} |")
+    else:
+        lines.append("| (none) | 0 |")
+    lines += [
         "",
         "## End-to-end latency (client-side)",
         "",
@@ -214,7 +249,11 @@ def render_markdown(summary: dict[str, Any], *, base_url: str, sha: str, ts: str
         "  start until the SSE `done` event is received.",
         "- **Server-side stages:** `metrics.stages_ms` returned in the SSE `done`",
         "  payload, timed with `time.perf_counter` inside the API.",
+        "- `generation` is Bedrock wait only; `stream_to_client` is SSE yield time;",
+        "  `output_guard` is the licence overlap check only.",
         "- Questions from `evals/complex-systems/golden.jsonl`, sequential with pause.",
+        "- Exit non-zero only when failure rate exceeds "
+        f"{int(FAILURE_RATE_EXIT_THRESHOLD * 100)}%.",
         "",
     ]
     return "\n".join(lines)
@@ -271,7 +310,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Would ask {len(questions)} questions at {args.base_url}")
         return 0
 
-    results: list[dict[str, Any]] = []
+    successes: list[dict[str, Any]] = []
+    failures: list[dict[str, Any]] = []
     for i, row in enumerate(questions, start=1):
         qid = row.get("id", i)
         question = row["question"]
@@ -279,22 +319,37 @@ def main(argv: list[str] | None = None) -> int:
         try:
             result = ask_once(args.base_url, args.collection, question, args.timeout)
             result["id"] = qid
-            results.append(result)
+            successes.append(result)
             print(
                 f"  client={result['client_e2e_ms']:.0f}ms "
                 f"cost={result.get('cost_usd')} status={result.get('cost_status')}",
                 flush=True,
             )
-        except (HTTPError, URLError, TimeoutError, RuntimeError) as exc:
-            print(f"  FAILED: {exc}", file=sys.stderr, flush=True)
+        except Exception as exc:
+            # Catch IncompleteRead / RemoteDisconnected / ConnectionResetError /
+            # HTTPError / URLError / TimeoutError and any other per-request fault.
+            err_type = type(exc).__name__
+            print(f"  FAILED: {err_type}: {exc}", file=sys.stderr, flush=True)
+            # Print traceback for unexpected errors (not the common network ones).
+            if not isinstance(exc, HTTPError | URLError | TimeoutError | RuntimeError):
+                traceback.print_exc()
+            failures.append(
+                {
+                    "id": qid,
+                    "ok": False,
+                    "error_type": err_type,
+                    "error": str(exc)[:500],
+                }
+            )
         if i < len(questions) and args.pause > 0:
             time.sleep(args.pause)
 
-    if not results:
-        print("All requests failed", file=sys.stderr)
-        return 2
+    attempted = len(successes) + len(failures)
+    if attempted == 0:
+        print("No requests attempted", file=sys.stderr)
+        return 1
 
-    summary = summarise(results)
+    summary = summarise(successes, failures)
     ts = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     sha = git_sha()
     payload = {
@@ -304,7 +359,8 @@ def main(argv: list[str] | None = None) -> int:
         "golden": str(args.golden.relative_to(REPO_ROOT)),
         "pause_s": args.pause,
         "summary": summary,
-        "results": results,
+        "results": successes,
+        "failures": failures,
     }
     args.out_json.parent.mkdir(parents=True, exist_ok=True)
     args.out_json.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -313,16 +369,25 @@ def main(argv: list[str] | None = None) -> int:
         encoding="utf-8",
     )
 
-    # Job summary / console table
     e2e = summary["client_e2e_ms"]
     print("\n## Benchmark summary\n")
-    print(f"| n | {summary['n']} |")
+    print(f"| n_ok | {summary['n']} |")
+    print(f"| n_failed | {summary['n_failed']} |")
+    print(f"| failure_rate | {100.0 * summary['failure_rate']:.1f}% |")
     print(f"| e2e p50 | {_fmt(e2e.get('p50'))} ms |")
     print(f"| e2e p95 | {_fmt(e2e.get('p95'))} ms |")
     print(f"| cost mean | {_fmt_cost(summary['cost_usd'].get('mean'))} |")
     for name, stats in summary["stages"].items():
         print(f"| {name} p50/p95 | {_fmt(stats.get('p50_ms'))} / {_fmt(stats.get('p95_ms'))} |")
     print(f"\nWrote {args.out_md} and {args.out_json}")
+
+    if summary["failure_rate"] > FAILURE_RATE_EXIT_THRESHOLD:
+        print(
+            f"Failure rate {100.0 * summary['failure_rate']:.1f}% exceeds "
+            f"{int(FAILURE_RATE_EXIT_THRESHOLD * 100)}% threshold",
+            file=sys.stderr,
+        )
+        return 2
     return 0
 
 
