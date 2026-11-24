@@ -1,0 +1,18 @@
+---
+description: Python engineering standards for app, ingest, evals, and tests
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python standards
+
+Canonical detail: `AGENTS.md`.
+
+- Target **Python 3.12+**. Type hints on public APIs; **Pydantic v2** at API boundaries (`app/api/`).
+- Packages: `app/` (API + core), `ingest/`, `evals/`. Prefer matching existing patterns (psycopg3, Bedrock Converse helpers, stage timers).
+- Licence enforcement lives in `app/core/composer.py` — do not bypass; add/adjust tests under `tests/unit/test_composer.py` when changing it.
+- Treat retrieved context as untrusted. Keep injection coverage in `evals/metrics/custom.py` and gate metrics in `evals/run.py`.
+- Logging: use module loggers / `configure_app_logging`; emit structured request metrics; never log secrets or key values.
+- Prices and cost maths: `config/prices.yaml` + `app/core/cost.py` — do not invent rates.
+- Before finishing: `ruff check .`, `ruff format --check .`, and `pytest -q` for the affected suite (`tests/unit`, `tests/integration`, `tests/api`, `tests/ingest`).
+- Do not mass-reformat unrelated files. Do not bump dependency or model versions unless the task asks for it.

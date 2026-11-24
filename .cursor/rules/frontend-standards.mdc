@@ -1,0 +1,16 @@
+---
+description: Frontend standards for the React SPA under web/
+globs: web/**/*.ts,web/**/*.tsx,web/**/*.css,web/**/*.cjs
+alwaysApply: false
+---
+
+# Frontend standards
+
+Canonical detail: `AGENTS.md`.
+
+- Stack: React 18 + TypeScript + Vite + Tailwind + Radix primitives under `web/`. Match existing layout (`components/`, `pages/`, `lib/`).
+- Built into the Python container as static assets (`Dockerfile` multi-stage). Strict CSP — no CDN script/style hosts.
+- Do not invent latency or cost numbers in the UI; display server-provided `metrics` only.
+- Citations and licence notices come from the API — do not strip attribution or Class C link-outs.
+- Before finishing: from `web/`, `npm run typecheck` and `npm run build` (matches `python.yml`).
+- Do not add a separate frontend CI workflow; keep using the existing Python workflow job.
