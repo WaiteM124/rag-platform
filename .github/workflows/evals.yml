@@ -51,7 +51,7 @@ jobs:
       RAG_JUDGE_MODEL_ID: ${{ vars.JUDGE_MODEL_ID || 'deepseek.v3.2' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Skip notice when eval role unset
         if: ${{ vars.AWS_EVAL_ROLE_ARN == '' }}
@@ -138,7 +138,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Placeholder
         run: |
