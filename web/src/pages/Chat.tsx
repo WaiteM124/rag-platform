@@ -18,7 +18,13 @@ export default function ChatPage() {
   const [answer, setAnswer] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [citations, setCitations] = useState<Citation[]>([]);
-  const [meta, setMeta] = useState<{ latency_ms?: number; cost_gbp?: number; tokens?: { input: number; output: number } }>({});
+  const [meta, setMeta] = useState<{
+    latency_ms?: number;
+    cost_usd?: number | null;
+    cost_status?: string;
+    cost_gbp?: number | null;
+    tokens?: { input: number; output: number };
+  }>({});
   const [error, setError] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [highlight, setHighlight] = useState<number | null>(null);
@@ -67,7 +73,9 @@ export default function ChatPage() {
               setAnswer(payload.answer ?? "");
               setCitations(payload.citations ?? []);
               setMeta({
-                latency_ms: payload.latency_ms,
+                latency_ms: payload.metrics?.total_ms ?? payload.latency_ms,
+                cost_usd: payload.metrics?.cost_usd ?? payload.cost_usd,
+                cost_status: payload.metrics?.cost_status ?? payload.cost_status,
                 cost_gbp: payload.cost_gbp,
                 tokens: payload.tokens,
               });
@@ -159,13 +167,21 @@ export default function ChatPage() {
               />
               {!streaming && (
                 <footer className="flex flex-wrap gap-3 border-t border-border pt-4 text-xs text-muted-foreground">
-                  {meta.latency_ms != null && <Badge variant="secondary">{meta.latency_ms} ms</Badge>}
+                  <span className="font-mono text-[11px] tracking-tight">
+                    {meta.latency_ms != null
+                      ? `took ${Math.round(meta.latency_ms)} ms`
+                      : "took — ms"}
+                    {", "}
+                    {meta.cost_status === "unverified" || meta.cost_usd == null
+                      ? "~$unverified"
+                      : `~$${Number(meta.cost_usd).toFixed(5)}`}
+                  </span>
                   {meta.tokens && (
                     <Badge variant="outline">
                       {meta.tokens.input}+{meta.tokens.output} tokens
                     </Badge>
                   )}
-                  {meta.cost_gbp != null && (
+                  {meta.cost_gbp != null && meta.cost_status !== "unverified" && (
                     <Badge variant="outline">£{meta.cost_gbp.toFixed(4)} est.</Badge>
                   )}
                 </footer>

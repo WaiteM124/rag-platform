@@ -37,6 +37,7 @@ def get_settings() -> Settings:
         daily_spend_cap_gbp=float(cap) if cap else 2.0,
         langfuse_public_key=os.environ.get("LANGFUSE_PUBLIC_KEY", ""),
         langfuse_secret_key=os.environ.get("LANGFUSE_SECRET_KEY", ""),
+        langfuse_host=os.environ.get("LANGFUSE_HOST", "https://cloud.langfuse.com"),
         https_enabled=os.environ.get("HTTPS_ENABLED", "").lower() in ("1", "true", "yes"),
     )
     return settings

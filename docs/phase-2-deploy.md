@@ -42,4 +42,13 @@ On apply:
 
 ## Langfuse
 
-Secret `rag-platform/langfuse` is created with empty JSON keys. After adding real keys in Secrets Manager, restart the ECS service (or redeploy). The app enables tracing only when both keys are non-empty.
+See **[langfuse.md](langfuse.md)** for the full owner checklist.
+
+Terraform creates two Secrets Manager secrets (values set manually in the console):
+
+- `rag-platform-prod/langfuse-public-key`
+- `rag-platform-prod/langfuse-secret-key`
+
+The web ECS task injects them as `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` and
+sets `LANGFUSE_HOST=https://cloud.langfuse.com`. Tracing is enabled only when both
+keys are non-empty; failures never break `/api/ask`.

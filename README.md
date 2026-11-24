@@ -185,6 +185,13 @@ rag-platform/
 - [ ] Security review
 - [ ] Privacy notice
 
+## Performance
+
+Measured p50/p95 latency and per-query token cost live at
+[docs/performance.md](docs/performance.md) (template until the **Benchmark**
+workflow or `scripts/benchmark.py` is run against the live site). Each answer
+in the UI also shows a compact `took X ms, ~$Y` line from server-side `metrics`.
+
 ## Estimated Monthly Cost (v1 prod)
 
 | Service | Estimate |

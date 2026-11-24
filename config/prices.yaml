@@ -1,26 +1,52 @@
-# Price cards for token cost estimation (USD per 1K tokens). Review monthly.
-version: 2
-checked_at: "2026-11-23"
-source_url: "https://aws.amazon.com/bedrock/pricing/"
+# Bedrock on-demand token prices for eu-west-2 (USD per 1K tokens).
+# Values come from the AWS Price List API for AmazonBedrock / EU (London).
+# Cross-check the marketing page: https://aws.amazon.com/bedrock/pricing/
+# Do not invent rates: if a London on-demand rate cannot be confirmed, set
+# input_per_1k / output_per_1k to null and verified: false.
+version: 3
+checked_at: "2026-11-24"
 region: eu-west-2
-note: >
-  Qwen3 235B and DeepSeek V3.2 eu-west-2 on-demand list prices taken from the
-  public Bedrock pricing explorer for London (Nov 2026); override via model
-  keys here if in-account invoices differ. Anthropic profiles kept for switch-back.
+price_list_publication_date: "2026-11-23T16:43:56Z"
+source_url: "https://aws.amazon.com/bedrock/pricing/"
+price_list_url: "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrock/current/eu-west-2/index.json"
 
 models:
+  # Generator (answer path)
   qwen.qwen3-235b-a22b-2507-v1:0:
+    # Source: AWS Price List EU (London) OnDemand, usagetype
+    # EUW2-Qwen3-235B-A22B-input-tokens / EUW2-Qwen3-235B-A22B-output-tokens
+    # Also listed under https://aws.amazon.com/bedrock/pricing/ (Qwen)
     input_per_1k: 0.00034
     output_per_1k: 0.00137
+    verified: true
+    source_url: "https://aws.amazon.com/bedrock/pricing/"
+
+  # Judge (eval only — not on the public /api/ask path)
   deepseek.v3.2:
+    # Source: AWS Price List EU (London) OnDemand, usagetype
+    # EUW2-deepseek.v3.2-input-tokens / EUW2-deepseek.v3.2-output-tokens
     input_per_1k: 0.000961
-    output_per_1k: 0.00287
-  eu.anthropic.claude-haiku-5-5:
-    input_per_1k: 0.001
-    output_per_1k: 0.005
-  eu.anthropic.claude-sonnet-5:
-    input_per_1k: 0.003
-    output_per_1k: 0.015
+    output_per_1k: 0.0028675
+    verified: true
+    source_url: "https://aws.amazon.com/bedrock/pricing/"
+
+  # Query / ingest embeddings
   amazon.titan-embed-text-v2:0:
+    # Source: AWS Price List EU (London) OnDemand, usagetype
+    # EUW2-TitanEmbeddingV2-Text-input-tokens ($0.0001 per 1K tokens)
     input_per_1k: 0.0001
     output_per_1k: 0.0
+    verified: true
+    source_url: "https://aws.amazon.com/bedrock/pricing/"
+
+  # Optional Anthropic profiles kept for switch-back (not verified for this PR)
+  eu.anthropic.claude-haiku-5-5:
+    input_per_1k: null
+    output_per_1k: null
+    verified: false
+    source_url: "https://aws.amazon.com/bedrock/pricing/"
+  eu.anthropic.claude-sonnet-5:
+    input_per_1k: null
+    output_per_1k: null
+    verified: false
+    source_url: "https://aws.amazon.com/bedrock/pricing/"

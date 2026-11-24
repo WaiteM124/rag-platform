@@ -6,25 +6,45 @@ locals {
   web_enabled = var.enable_web && var.enable_ecs && var.enable_vpc && var.enable_rds
 }
 
-resource "aws_secretsmanager_secret" "langfuse" {
+# Langfuse Cloud EU keys — values are set manually in the console (never in Terraform).
+resource "aws_secretsmanager_secret" "langfuse_public_key" {
   count = local.web_enabled ? 1 : 0
 
-  name        = "${var.project_name}/langfuse"
-  description = "Langfuse keys (empty until filled manually)"
+  name        = "${local.name_prefix}/langfuse-public-key"
+  description = "Langfuse public key (set manually after creating a Cloud EU project)"
 
   tags = {
-    Name = "${var.project_name}-langfuse"
+    Name = "${local.name_prefix}-langfuse-public-key"
   }
 }
 
-resource "aws_secretsmanager_secret_version" "langfuse_placeholder" {
+resource "aws_secretsmanager_secret" "langfuse_secret_key" {
   count = local.web_enabled ? 1 : 0
 
-  secret_id = aws_secretsmanager_secret.langfuse[0].id
-  secret_string = jsonencode({
-    LANGFUSE_PUBLIC_KEY = ""
-    LANGFUSE_SECRET_KEY = ""
-  })
+  name        = "${local.name_prefix}/langfuse-secret-key"
+  description = "Langfuse secret key (set manually after creating a Cloud EU project)"
+
+  tags = {
+    Name = "${local.name_prefix}-langfuse-secret-key"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "langfuse_public_key_placeholder" {
+  count = local.web_enabled ? 1 : 0
+
+  secret_id     = aws_secretsmanager_secret.langfuse_public_key[0].id
+  secret_string = "REPLACE_ME"
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "langfuse_secret_key_placeholder" {
+  count = local.web_enabled ? 1 : 0
+
+  secret_id     = aws_secretsmanager_secret.langfuse_secret_key[0].id
+  secret_string = "REPLACE_ME"
 
   lifecycle {
     ignore_changes = [secret_string]
@@ -194,7 +214,8 @@ data "aws_iam_policy_document" "web_task_execution_secrets" {
     ]
     resources = compact([
       aws_db_instance.main[0].master_user_secret[0].secret_arn,
-      aws_secretsmanager_secret.langfuse[0].arn,
+      aws_secretsmanager_secret.langfuse_public_key[0].arn,
+      aws_secretsmanager_secret.langfuse_secret_key[0].arn,
     ])
   }
 }
@@ -244,7 +265,8 @@ data "aws_iam_policy_document" "web_task" {
     ]
     resources = compact([
       aws_db_instance.main[0].master_user_secret[0].secret_arn,
-      aws_secretsmanager_secret.langfuse[0].arn,
+      aws_secretsmanager_secret.langfuse_public_key[0].arn,
+      aws_secretsmanager_secret.langfuse_secret_key[0].arn,
     ])
   }
 
@@ -300,6 +322,17 @@ resource "aws_ecs_task_definition" "web" {
       { name = "DAILY_SPEND_CAP_GBP", value = var.daily_spend_cap_gbp },
       { name = "HTTPS_ENABLED", value = var.enable_https ? "true" : "false" },
       { name = "RAG_DB_SECRET_ARN", value = aws_db_instance.main[0].master_user_secret[0].secret_arn },
+      { name = "LANGFUSE_HOST", value = "https://cloud.langfuse.com" },
+    ]
+    secrets = [
+      {
+        name      = "LANGFUSE_PUBLIC_KEY"
+        valueFrom = aws_secretsmanager_secret.langfuse_public_key[0].arn
+      },
+      {
+        name      = "LANGFUSE_SECRET_KEY"
+        valueFrom = aws_secretsmanager_secret.langfuse_secret_key[0].arn
+      },
     ]
     logConfiguration = {
       logDriver = "awslogs"

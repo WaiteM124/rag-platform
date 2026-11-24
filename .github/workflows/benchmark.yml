@@ -1,0 +1,68 @@
+name: Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "API base URL"
+        required: true
+        default: "https://rag.mileswaite.net"
+      limit:
+        description: "Max questions (empty = full golden set)"
+        required: false
+        default: ""
+      pause:
+        description: "Seconds between questions"
+        required: true
+        default: "2"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: Live latency and cost benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run benchmark
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          LIMIT: ${{ inputs.limit }}
+          PAUSE: ${{ inputs.pause }}
+        run: |
+          set -euo pipefail
+          ARGS=(--base-url "$BASE_URL" --pause "$PAUSE")
+          if [ -n "${LIMIT}" ]; then
+            ARGS+=(--limit "$LIMIT")
+          fi
+          python scripts/benchmark.py "${ARGS[@]}" | tee benchmark-console.txt
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Live benchmark"
+            echo
+            if [ -f docs/performance.md ]; then
+              cat docs/performance.md
+            else
+              echo "No performance.md produced."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            docs/performance.md
+            docs/performance.json
+            benchmark-console.txt
+          if-no-files-found: warn

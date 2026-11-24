@@ -69,17 +69,47 @@ def test_ask_sse(mock_engine_cls, mock_stream, _rl, _cap, client):
 
     mock_stream.side_effect = fake_stream
 
+    engine.retriever._last_embed_input_tokens = 7
+    engine.retriever._last_embed_model_id = "amazon.titan-embed-text-v2:0"
+    from app.core.retrieval import RetrievalTiming
+
+    engine.retriever._last_timing = RetrievalTiming(
+        query_embedding_ms=11.0, vector_retrieval_ms=22.0
+    )
+    engine.prices = {
+        "qwen.qwen3-235b-a22b-2507-v1:0": {
+            "input_per_1k": 0.00034,
+            "output_per_1k": 0.00137,
+            "verified": True,
+        },
+        "amazon.titan-embed-text-v2:0": {
+            "input_per_1k": 0.0001,
+            "output_per_1k": 0.0,
+            "verified": True,
+        },
+    }
+
     with patch("app.api.main.record_spend_gbp"), patch("app.api.main.emit_daily_spend_gbp"):
         with patch("app.api.main.LicenceComposer") as comp_cls:
-            comp_cls.return_value.apply_output_policy.return_value = ("Answer [1]", True)
-            r = client.post(
-                "/api/ask",
-                json={"collection": "complex-systems", "question": "What is a tipping point?"},
-            )
+            with patch("app.api.main.load_price_cards", return_value=engine.prices):
+                comp_cls.return_value.apply_output_policy.return_value = (
+                    "Answer [1]",
+                    True,
+                )
+                r = client.post(
+                    "/api/ask",
+                    json={
+                        "collection": "complex-systems",
+                        "question": "What is a tipping point?",
+                    },
+                )
     assert r.status_code == 200
     body = r.text
     assert "data:" in body
     assert "done" in body or "Answer" in body
+    assert '"metrics"' in body
+    assert "query_embedding" in body
+    assert "cost_status" in body
 
 
 def test_ask_rejects_collection(client):

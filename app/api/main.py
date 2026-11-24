@@ -4,7 +4,7 @@ import json
 import logging
 import mimetypes
 import os
-import time
+import uuid
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -18,18 +18,32 @@ from app.api.citations import build_citations
 from app.api.langfuse_trace import maybe_trace
 from app.api.metrics import emit_daily_spend_gbp
 from app.api.rate_limit import client_ip, rate_limited
+from app.api.request_log import build_metrics_log_line, emit_request_metrics_log
 from app.api.settings import get_settings
 from app.api.spend import record_spend_gbp, spend_cap_exceeded, spend_today_gbp
+from app.api.stage_timer import StageTimer
 from app.core.answer import SYSTEM_PROMPT, AnswerEngine
 from app.core.bedrock import ANSWER_MODEL, converse_stream
 from app.core.composer import LicenceComposer
-from app.core.cost import TokenUsage, load_price_cards
+from app.core.cost import (
+    TokenUsage,
+    combine_costs,
+    estimate_embed_cost,
+    load_price_cards,
+)
 from ingest.config import db_dsn
 from ingest.migrations.runner import run_migrations
 
 logger = logging.getLogger(__name__)
 
 ALLOWED_COLLECTIONS = frozenset({"complex-systems"})
+
+# Actual answer stages on /api/ask (no rerank step exists in this codebase).
+STAGE_QUERY_EMBEDDING = "query_embedding"
+STAGE_VECTOR_RETRIEVAL = "vector_retrieval"
+STAGE_PROMPT_BUILD = "prompt_build"
+STAGE_GENERATION = "generation"
+STAGE_OUTPUT_GUARD = "output_guard"
 
 app = FastAPI(title="RAG Platform", version="0.2.0")
 
@@ -115,70 +129,237 @@ async def ask(body: AskBody, request: Request) -> StreamingResponse:
             detail="daily spend cap reached; try again tomorrow UTC",
         )
 
+    request_id = str(uuid.uuid4())
     engine = AnswerEngine(db_dsn())
-    t0 = time.perf_counter()
-
-    trace = None
-    with maybe_trace("ask", {"collection": body.collection}) as active_trace:
-        trace = active_trace
-        chunks = engine.retriever.retrieve(question, collection=body.collection)
-        context = engine.composer.context_blocks(chunks)
-        user_text = f"Question:\n{question}\n\nContext:\n{context}"
+    timer = StageTimer()
+    model_id = settings.answer_model_id or ANSWER_MODEL
+    price_cards = load_price_cards()
 
     async def event_stream() -> AsyncIterator[str]:
         answer_parts: list[str] = []
         usage = {"input_tokens": 0, "output_tokens": 0}
-        try:
-            stream, usage = converse_stream(
-                messages=[{"role": "user", "content": [{"text": user_text}]}],
-                system=SYSTEM_PROMPT,
-                model_id=settings.answer_model_id or ANSWER_MODEL,
-            )
-            for chunk in stream:
-                answer_parts.append(chunk)
-                payload = {"type": "delta", "text": chunk}
-                yield f"data: {json.dumps(payload)}\n\n"
-        except Exception as exc:
-            logger.exception("ask stream failed")
-            err = {"type": "error", "message": str(exc)[:200]}
-            yield f"data: {json.dumps(err)}\n\n"
-            return
+        chunks = []
+        answer = ""
+        embed_tokens = 0
+        embed_model = ""
+        embed_est = estimate_embed_cost(0, "", price_cards)
 
-        answer = "".join(answer_parts)
-        composer = LicenceComposer()
-        answer, _ = composer.apply_output_policy(answer, chunks)
-        in_tok = int(usage.get("input_tokens", 0))
-        out_tok = int(usage.get("output_tokens", 0))
-        model = settings.answer_model_id or ANSWER_MODEL
-        cost_usd = TokenUsage(in_tok, out_tok, model).cost_usd(load_price_cards())
-        cost_gbp = cost_usd * settings.usd_to_gbp
-        record_spend_gbp(cost_gbp)
-        try:
-            with psycopg.connect(db_dsn()) as conn:
-                today_total = spend_today_gbp(conn)
-            emit_daily_spend_gbp(today_total)
-        except Exception:
-            logger.exception("spend metric failed")
-
-        latency_ms = int((time.perf_counter() - t0) * 1000)
-        if trace:
+        with maybe_trace(
+            "ask",
+            {"collection": body.collection},
+            request_id=request_id,
+        ) as trace:
             try:
-                trace.update(output={"answer_len": len(answer), "cost_gbp": cost_gbp})
+                # HybridRetriever times query_embedding vs vector_retrieval internally
+                # (embed call + lexical/vector/RRF fetch). No rerank stage exists.
+                with trace.span(
+                    "retrieval",
+                    metadata={"collection": body.collection},
+                ) as retrieval_root:
+                    chunks = engine.retriever.retrieve(question, collection=body.collection)
+                    timing = engine.retriever._last_timing
+                    timer.stages_ms[STAGE_QUERY_EMBEDDING] = timing.query_embedding_ms
+                    timer.stages_ms[STAGE_VECTOR_RETRIEVAL] = timing.vector_retrieval_ms
+                    embed_tokens = engine.retriever._last_embed_input_tokens
+                    embed_model = engine.retriever._last_embed_model_id
+                    embed_est = estimate_embed_cost(embed_tokens, embed_model, price_cards)
+                    try:
+                        retrieval_root.update(
+                            output={
+                                "n_chunks": len(chunks),
+                                "stages_ms": {
+                                    STAGE_QUERY_EMBEDDING: timing.query_embedding_ms,
+                                    STAGE_VECTOR_RETRIEVAL: timing.vector_retrieval_ms,
+                                },
+                            }
+                        )
+                    except Exception:
+                        pass
+
+                with trace.generation(
+                    name=STAGE_QUERY_EMBEDDING,
+                    model=embed_model,
+                    usage={
+                        "input": embed_tokens,
+                        "output": 0,
+                        "total": embed_tokens,
+                        "unit": "TOKENS",
+                    },
+                    metadata={
+                        "stage": STAGE_QUERY_EMBEDDING,
+                        "ms": timer.stages_ms.get(STAGE_QUERY_EMBEDDING),
+                        "cost_status": embed_est.status,
+                    },
+                    cost_details=({"total": embed_est.usd} if embed_est.usd is not None else None),
+                ):
+                    pass
+
+                with timer.stage(STAGE_PROMPT_BUILD):
+                    with trace.span(STAGE_PROMPT_BUILD) as prompt_span:
+                        context = engine.composer.context_blocks(chunks)
+                        user_text = f"Question:\n{question}\n\nContext:\n{context}"
+                        try:
+                            prompt_span.update(
+                                output={
+                                    "context_blocks": len(chunks),
+                                    "prompt_chars": len(user_text),
+                                }
+                            )
+                        except Exception:
+                            pass
+
+                with timer.stage(STAGE_GENERATION):
+                    with trace.generation(
+                        name=STAGE_GENERATION,
+                        model=model_id,
+                        metadata={"stage": STAGE_GENERATION},
+                    ) as gen_obs:
+                        try:
+                            stream, usage = converse_stream(
+                                messages=[
+                                    {
+                                        "role": "user",
+                                        "content": [{"text": user_text}],
+                                    }
+                                ],
+                                system=SYSTEM_PROMPT,
+                                model_id=model_id,
+                            )
+                            for chunk in stream:
+                                answer_parts.append(chunk)
+                                payload = {"type": "delta", "text": chunk}
+                                yield f"data: {json.dumps(payload)}\n\n"
+                        except Exception as exc:
+                            logger.exception("ask stream failed")
+                            err = {"type": "error", "message": str(exc)[:200]}
+                            yield f"data: {json.dumps(err)}\n\n"
+                            return
+
+                        in_tok = int(usage.get("input_tokens", 0))
+                        out_tok = int(usage.get("output_tokens", 0))
+                        gen_est = TokenUsage(in_tok, out_tok, model_id).estimate_cost(price_cards)
+                        try:
+                            gen_obs.update(
+                                usage={
+                                    "input": in_tok,
+                                    "output": out_tok,
+                                    "total": in_tok + out_tok,
+                                    "unit": "TOKENS",
+                                },
+                                cost_details=(
+                                    {"total": gen_est.usd} if gen_est.usd is not None else None
+                                ),
+                                metadata={
+                                    "cost_usd": gen_est.usd,
+                                    "cost_status": gen_est.status,
+                                },
+                                output={"answer_len": len("".join(answer_parts))},
+                            )
+                        except Exception:
+                            pass
+
+                answer = "".join(answer_parts)
+                with timer.stage(STAGE_OUTPUT_GUARD):
+                    with trace.span(STAGE_OUTPUT_GUARD) as guard_span:
+                        composer = LicenceComposer()
+                        answer, licence_ok = composer.apply_output_policy(answer, chunks)
+                        try:
+                            guard_span.update(output={"licence_compliant": licence_ok})
+                        except Exception:
+                            pass
+
+            except Exception as exc:
+                logger.exception("ask pipeline failed")
+                err = {"type": "error", "message": str(exc)[:200]}
+                yield f"data: {json.dumps(err)}\n\n"
+                return
+
+            in_tok = int(usage.get("input_tokens", 0))
+            out_tok = int(usage.get("output_tokens", 0))
+            gen_est = TokenUsage(in_tok, out_tok, model_id).estimate_cost(price_cards)
+            total_est = combine_costs(embed_est, gen_est)
+            cost_usd = total_est.usd
+            cost_status = total_est.status
+            cost_gbp = (cost_usd * settings.usd_to_gbp) if cost_usd is not None else None
+
+            if cost_gbp is not None:
+                try:
+                    record_spend_gbp(cost_gbp)
+                    with psycopg.connect(db_dsn()) as conn:
+                        today_total = spend_today_gbp(conn)
+                    emit_daily_spend_gbp(today_total)
+                except Exception:
+                    logger.exception("spend metric failed")
+
+            total_ms = timer.total_ms()
+            stages = timer.as_dict()
+            tokens = {
+                "embed_input": embed_tokens,
+                "generation_input": in_tok,
+                "generation_output": out_tok,
+            }
+            models = {
+                "embedding": embed_model,
+                "generation": model_id,
+            }
+            metrics = {
+                "request_id": request_id,
+                "stages_ms": stages,
+                "total_ms": total_ms,
+                "tokens": tokens,
+                "models": models,
+                "cost_usd": cost_usd,
+                "cost_gbp": round(cost_gbp, 6) if cost_gbp is not None else None,
+                "cost_status": cost_status,
+            }
+
+            try:
+                emit_request_metrics_log(
+                    build_metrics_log_line(
+                        request_id=request_id,
+                        collection=body.collection,
+                        question=question,
+                        answer_len=len(answer),
+                        models=models,
+                        stages_ms=stages,
+                        total_ms=total_ms,
+                        tokens=tokens,
+                        cost_usd=cost_usd,
+                        cost_status=cost_status,
+                    )
+                )
+            except Exception:
+                logger.exception("metrics log failed")
+
+            try:
+                trace.update(
+                    output={
+                        "answer_len": len(answer),
+                        "cost_usd": cost_usd,
+                        "cost_status": cost_status,
+                        "total_ms": total_ms,
+                    }
+                )
             except Exception:
                 pass
-        final = {
-            "type": "done",
-            "answer": answer,
-            "citations": build_citations(answer, chunks),
-            "latency_ms": latency_ms,
-            "tokens": {
-                "input": in_tok,
-                "output": out_tok,
-                "model": settings.answer_model_id or ANSWER_MODEL,
-            },
-            "cost_gbp": round(cost_gbp, 6),
-        }
-        yield f"data: {json.dumps(final)}\n\n"
+
+            final = {
+                "type": "done",
+                "answer": answer,
+                "citations": build_citations(answer, chunks),
+                "latency_ms": int(total_ms),
+                "tokens": {
+                    "input": in_tok,
+                    "output": out_tok,
+                    "embed_input": embed_tokens,
+                    "model": model_id,
+                },
+                "cost_gbp": round(cost_gbp, 6) if cost_gbp is not None else None,
+                "cost_usd": cost_usd,
+                "cost_status": cost_status,
+                "metrics": metrics,
+            }
+            yield f"data: {json.dumps(final)}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
