@@ -4,6 +4,7 @@ import json
 import logging
 import mimetypes
 import os
+import time
 import uuid
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -15,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app.api.citations import build_citations
-from app.api.langfuse_trace import maybe_trace
+from app.api.langfuse_trace import init_langfuse_at_startup, maybe_trace
 from app.api.metrics import emit_daily_spend_gbp
 from app.api.rate_limit import client_ip, rate_limited
 from app.api.request_log import build_metrics_log_line, emit_request_metrics_log
@@ -43,6 +44,7 @@ STAGE_QUERY_EMBEDDING = "query_embedding"
 STAGE_VECTOR_RETRIEVAL = "vector_retrieval"
 STAGE_PROMPT_BUILD = "prompt_build"
 STAGE_GENERATION = "generation"
+STAGE_STREAM_TO_CLIENT = "stream_to_client"
 STAGE_OUTPUT_GUARD = "output_guard"
 
 app = FastAPI(title="RAG Platform", version="0.2.0")
@@ -64,6 +66,7 @@ def on_startup() -> None:
         os.environ.get("LANGFUSE_PUBLIC_KEY", ""),
         os.environ.get("LANGFUSE_SECRET_KEY", ""),
     )
+    init_langfuse_at_startup()
 
 
 @app.middleware("http")
@@ -213,55 +216,74 @@ async def ask(body: AskBody, request: Request) -> StreamingResponse:
                         except Exception:
                             pass
 
-                with timer.stage(STAGE_GENERATION):
-                    with trace.generation(
-                        name=STAGE_GENERATION,
-                        model=model_id,
-                        metadata={"stage": STAGE_GENERATION},
-                    ) as gen_obs:
-                        try:
-                            stream, usage = converse_stream(
-                                messages=[
-                                    {
-                                        "role": "user",
-                                        "content": [{"text": user_text}],
-                                    }
-                                ],
-                                system=SYSTEM_PROMPT,
-                                model_id=model_id,
-                            )
-                            for chunk in stream:
-                                answer_parts.append(chunk)
-                                payload = {"type": "delta", "text": chunk}
-                                yield f"data: {json.dumps(payload)}\n\n"
-                        except Exception as exc:
-                            logger.exception("ask stream failed")
-                            err = {"type": "error", "message": str(exc)[:200]}
-                            yield f"data: {json.dumps(err)}\n\n"
-                            return
+                # Split Bedrock wait time (generation) from yielding SSE deltas
+                # (stream_to_client) so client/network lag is not billed to either
+                # generation or the licence guard.
+                generation_ms = 0.0
+                stream_ms = 0.0
+                with trace.generation(
+                    name=STAGE_GENERATION,
+                    model=model_id,
+                    metadata={"stage": STAGE_GENERATION},
+                ) as gen_obs:
+                    try:
+                        t_bedrock = time.perf_counter()
+                        stream, usage = converse_stream(
+                            messages=[
+                                {
+                                    "role": "user",
+                                    "content": [{"text": user_text}],
+                                }
+                            ],
+                            system=SYSTEM_PROMPT,
+                            model_id=model_id,
+                        )
+                        generation_ms += (time.perf_counter() - t_bedrock) * 1000.0
+                        stream_iter = iter(stream)
+                        while True:
+                            t_wait = time.perf_counter()
+                            try:
+                                chunk = next(stream_iter)
+                            except StopIteration:
+                                generation_ms += (time.perf_counter() - t_wait) * 1000.0
+                                break
+                            generation_ms += (time.perf_counter() - t_wait) * 1000.0
+                            answer_parts.append(chunk)
+                            payload = {"type": "delta", "text": chunk}
+                            t_yield = time.perf_counter()
+                            yield f"data: {json.dumps(payload)}\n\n"
+                            stream_ms += (time.perf_counter() - t_yield) * 1000.0
+                    except Exception as exc:
+                        logger.exception("ask stream failed")
+                        err = {"type": "error", "message": str(exc)[:200]}
+                        yield f"data: {json.dumps(err)}\n\n"
+                        return
 
-                        in_tok = int(usage.get("input_tokens", 0))
-                        out_tok = int(usage.get("output_tokens", 0))
-                        gen_est = TokenUsage(in_tok, out_tok, model_id).estimate_cost(price_cards)
-                        try:
-                            gen_obs.update(
-                                usage={
-                                    "input": in_tok,
-                                    "output": out_tok,
-                                    "total": in_tok + out_tok,
-                                    "unit": "TOKENS",
-                                },
-                                cost_details=(
-                                    {"total": gen_est.usd} if gen_est.usd is not None else None
-                                ),
-                                metadata={
-                                    "cost_usd": gen_est.usd,
-                                    "cost_status": gen_est.status,
-                                },
-                                output={"answer_len": len("".join(answer_parts))},
-                            )
-                        except Exception:
-                            pass
+                    in_tok = int(usage.get("input_tokens", 0))
+                    out_tok = int(usage.get("output_tokens", 0))
+                    gen_est = TokenUsage(in_tok, out_tok, model_id).estimate_cost(price_cards)
+                    try:
+                        gen_obs.update(
+                            usage={
+                                "input": in_tok,
+                                "output": out_tok,
+                                "total": in_tok + out_tok,
+                                "unit": "TOKENS",
+                            },
+                            cost_details=(
+                                {"total": gen_est.usd} if gen_est.usd is not None else None
+                            ),
+                            metadata={
+                                "cost_usd": gen_est.usd,
+                                "cost_status": gen_est.status,
+                            },
+                            output={"answer_len": len("".join(answer_parts))},
+                        )
+                    except Exception:
+                        pass
+
+                timer.stages_ms[STAGE_GENERATION] = round(generation_ms, 3)
+                timer.stages_ms[STAGE_STREAM_TO_CLIENT] = round(stream_ms, 3)
 
                 answer = "".join(answer_parts)
                 with timer.stage(STAGE_OUTPUT_GUARD):

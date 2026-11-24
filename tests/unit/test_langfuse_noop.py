@@ -3,7 +3,12 @@ from __future__ import annotations
 import logging
 from unittest.mock import MagicMock, patch
 
-from app.api.langfuse_trace import _NoOpObservation, maybe_trace
+from app.api.langfuse_trace import (
+    _NoOpObservation,
+    init_langfuse_at_startup,
+    maybe_trace,
+    reset_langfuse_client_for_tests,
+)
 from app.api.settings import (
     get_settings,
     langfuse_keys_configured,
@@ -61,6 +66,7 @@ def test_maybe_trace_noop_without_keys():
 
 
 def test_maybe_trace_noop_on_terraform_placeholder():
+    reset_langfuse_client_for_tests()
     with patch("app.api.langfuse_trace.get_settings") as gs:
         gs.return_value.langfuse_public_key = "REPLACE_ME"
         gs.return_value.langfuse_secret_key = "REPLACE_ME"
@@ -72,12 +78,40 @@ def test_maybe_trace_noop_on_terraform_placeholder():
 
 
 def test_maybe_trace_noop_when_client_raises():
+    reset_langfuse_client_for_tests()
     with patch("app.api.langfuse_trace.get_settings") as gs:
         gs.return_value.langfuse_public_key = "pk"
         gs.return_value.langfuse_secret_key = "sk"
         gs.return_value.langfuse_host = "https://cloud.langfuse.com"
-        fake_mod = MagicMock()
-        fake_mod.Langfuse.side_effect = RuntimeError("boom")
-        with patch.dict("sys.modules", {"langfuse": fake_mod}):
+        with patch("app.api.langfuse_trace.get_langfuse_client", return_value=None):
             with maybe_trace("ask") as trace:
                 assert isinstance(trace, _NoOpObservation)
+
+
+def test_init_langfuse_auth_ok_and_failed(caplog):
+    reset_langfuse_client_for_tests()
+    with patch("app.api.langfuse_trace.get_settings") as gs:
+        gs.return_value.langfuse_public_key = "pk-abcdef012345"
+        gs.return_value.langfuse_secret_key = "sk-secret"
+        gs.return_value.langfuse_host = "https://cloud.langfuse.com"
+        client = MagicMock()
+        client.auth_check.return_value = True
+        with patch("app.api.langfuse_trace.get_langfuse_client", return_value=client):
+            with caplog.at_level(logging.INFO, logger="app.api.langfuse_trace"):
+                init_langfuse_at_startup()
+        assert any("Langfuse auth ok" in r.message for r in caplog.records)
+        assert "pk-abcde" in caplog.text  # first 8 chars of public key only
+        assert "sk-secret" not in caplog.text
+
+    reset_langfuse_client_for_tests()
+    caplog.clear()
+    with patch("app.api.langfuse_trace.get_settings") as gs:
+        gs.return_value.langfuse_public_key = "pk-abcdef012345"
+        gs.return_value.langfuse_secret_key = "sk-secret"
+        gs.return_value.langfuse_host = "https://cloud.langfuse.com"
+        client = MagicMock()
+        client.auth_check.side_effect = RuntimeError("unauthorized")
+        with patch("app.api.langfuse_trace.get_langfuse_client", return_value=client):
+            with caplog.at_level(logging.ERROR, logger="app.api.langfuse_trace"):
+                init_langfuse_at_startup()
+        assert any("Langfuse auth FAILED" in r.message for r in caplog.records)

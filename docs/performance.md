@@ -30,6 +30,7 @@ live site to replace this template with p50/p95 latency and cost figures.
 | vector_retrieval | Not yet measured | Not yet measured | Not yet measured |
 | prompt_build | Not yet measured | Not yet measured | Not yet measured |
 | generation | Not yet measured | Not yet measured | Not yet measured |
+| stream_to_client | Not yet measured | Not yet measured | Not yet measured |
 | output_guard | Not yet measured | Not yet measured | Not yet measured |
 
 ## Cost per query (USD)
@@ -45,7 +46,7 @@ live site to replace this template with p50/p95 latency and cost figures.
   until the SSE `done` event is received.
 - **Server-side stages:** `metrics.stages_ms` returned in the SSE `done` payload,
   timed with `time.perf_counter` inside the API (embedding, hybrid retrieval,
-  prompt build, Bedrock generation, licence/output guard). There is no rerank stage
-  in the current code path.
+  prompt build, Bedrock generation, SSE yield/`stream_to_client`, licence/output
+  guard). There is no rerank stage in the current code path.
 - Questions are the versioned Complex Systems golden set
   (`evals/complex-systems/golden.jsonl`), asked sequentially with a polite pause.
